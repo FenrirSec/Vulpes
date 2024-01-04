@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=FirstSetup
+Comment=First-time setup for Vulpes
+Icon=preferences-desktop-screensaver
+Exec=bash /etc/setup/xinitscript.sh
+TryExec=bash /etc/setup/xinitscript.sh
+OnlyShowIn=XFCE;
