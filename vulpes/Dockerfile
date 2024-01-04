@@ -46,6 +46,8 @@ RUN wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/Anonym
 RUN wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/Hack.zip && unzip Hack.zip -d /usr/share/fonts/Hack && rm Hack.zip
 
 # In case run.sh has been edited on windows
-RUN dos2unix /run.sh
+RUN dos2unix /run.sh && dos2unix /etc/setup/postinstall.sh
+
+EXPOSE 5900
 
 CMD ["/run.sh"]
