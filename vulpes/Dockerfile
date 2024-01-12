@@ -26,7 +26,7 @@ RUN echo "vulpes:vulpes" | chpasswd
 
 ## Permission and default home management
 RUN cp /etc/setup/xinitrc /home/vulpes/.xinitrc && cp /etc/setup/xinitrc /root/.xinitrc
-RUN cp /etc/setup/xinitscript.sh /etc/X11/xinit/xinitrc.d/
+#RUN cp /etc/setup/xinitscript.sh /etc/X11/xinit/xinitrc.d/
 
 ## Autorun setup
 RUN cp /etc/setup/setup.desktop /etc/xdg/autostart

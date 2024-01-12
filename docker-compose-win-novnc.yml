@@ -8,6 +8,7 @@ services:
     hostname: vulpes
     environment:
       PORT: 6080
+      PASSWORD: CHANGEME
     ports:
       - 6080:6080
     volumes:
@@ -19,4 +20,5 @@ services:
   novnc:
     image: vulpes-novnc:latest
     build: ./novnc
-    ports: 8000:80
+    ports: 
+      - 8000:80

@@ -2,11 +2,12 @@
 
 ## VNC server start
 
-if [[ "$PASSWORD" == "" ]];then
-    PASSWORD=$(pwgen 14)
-    echo "Password is : $PASSWORD"
-    su -c "echo -e \"$PASSWORD\n$PASSWORD\nn\n\" | vncpasswd" vulpes
-fi
+#if [[ "$PASSWORD" == "" ]];then
+#    PASSWORD=$(pwgen 14)
+#    echo "Password is : $PASSWORD"
+#fi
+
+su -c "echo -e \"$PASSWORD\n$PASSWORD\nn\n\" | vncpasswd" vulpes
 
 #unset PASSWORD
 

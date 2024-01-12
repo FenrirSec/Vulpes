@@ -8,10 +8,11 @@ services:
     hostname: vulpes
     environment:
       PORT: 6080
+      PASSWORD: CHANGEME
     ports:
       - 6080:6080
     volumes:
-      - C:\Users\lp1\Documents\Shared:/shared:ro
+      - $HOME/Shared:/shared:ro
     cap_add:
       - NET_ADMIN
     privileged: true
