@@ -1,0 +1,17 @@
+version: "3.3"
+
+services:
+
+  workstation:
+    image: vulpes:latest
+    build: ./vulpes
+    hostname: vulpes
+    environment:
+      PORT: 6080
+    ports:
+      - 6080:6080
+    volumes:
+      - C:\Users\lp1\Documents\Shared:/shared:ro
+    cap_add:
+      - NET_ADMIN
+    privileged: true

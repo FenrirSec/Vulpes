@@ -4,13 +4,11 @@
 
 if [[ "$PASSWORD" == "" ]];then
     PASSWORD=$(pwgen 14)
+    echo "Password is : $PASSWORD"
+    su -c "echo -e \"$PASSWORD\n$PASSWORD\nn\n\" | vncpasswd" vulpes
 fi
 
-echo "Password is : $PASSWORD"
-
-su -c "echo -e \"$PASSWORD\n$PASSWORD\nn\n\" | vncpasswd" vulpes
-
-unset PASSWORD
+#unset PASSWORD
 
 su -c "vncserver :0" vulpes&
 
