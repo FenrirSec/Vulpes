@@ -2,7 +2,7 @@
 
 All in one Docker image with hacking tools for Pentesting and Labs
 
-![logo](./setup/logo.jpg)
+![logo](./setup/logo.png)
 
 ## Setup
 

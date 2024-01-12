@@ -35,4 +35,11 @@ echo 'eval "$(oh-my-posh --init --shell bash --config /home/vulpes/.poshthemes/a
 
 cp /etc/setup/terminal $HOME/.config/xfce4/terminal
 
+# Setting wallpaper
+
+xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitorVNC-0/workspace0/last-image --set /usr/share/backgrounds/xfce/vulpes.png
+xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitorVNC-0/workspace1/last-image --set /usr/share/backgrounds/xfce/vulpes.png
+xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitorVNC-0/workspace2/last-image --set /usr/share/backgrounds/xfce/vulpes.png
+xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitorVNC-0/workspace3/last-image --set /usr/share/backgrounds/xfce/vulpes.png
+
 touch $HOME/.setupdone

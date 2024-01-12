@@ -46,6 +46,10 @@ RUN sed -i 's/<property name="plugin-9" type="string" value="power-manager-plugi
 RUN wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/AnonymousPro.zip && unzip AnonymousPro.zip -d /usr/share/fonts/Anonymice/ && rm AnonymousPro.zip
 RUN wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/Hack.zip && unzip Hack.zip -d /usr/share/fonts/Hack && rm Hack.zip
 
+# Updating background
+RUN rm -fr /usr/share/backgrounds/xfce/*
+COPY ./setup/wallpaper.png /usr/share/backgrounds/xfce/vulpes.png
+
 # In case run.sh has been edited on windows
 RUN dos2unix /run.sh && dos2unix /etc/setup/postinstall.sh && dos2unix /etc/setup/xinitscript.sh && dos2unix /etc/setup/postinstall.sh
 
