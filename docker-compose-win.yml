@@ -11,8 +11,9 @@ services:
       PASSWORD: CHANGEME
     ports:
       - 6080:6080
+      - 5900:5900
     volumes:
-      - C:\Users\lp1\Documents\Shared:/shared:ro
+      - "%HOMEPATH%\Documents\Shared:/shared:ro"
     cap_add:
       - NET_ADMIN
     privileged: true

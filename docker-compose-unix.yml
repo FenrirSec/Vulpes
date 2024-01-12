@@ -11,6 +11,7 @@ services:
       PASSWORD: CHANGEME
     ports:
       - 6080:6080
+      - 5900:5900
     volumes:
       - $HOME/Shared:/shared:ro
     cap_add:
