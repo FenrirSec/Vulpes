@@ -24,7 +24,14 @@ So here's Vulpes (also VulpOS, still unsure about the name)!
 
 `$> docker-compose -f docker-compose-unix-novnc.yml up`
 
-Once your build is done (which takes usually around 10 to 20 seconds) you can enjoy Vulpes in your browser on : http://127.0.0.1:8080/?path=127.0.0.1:6080
+Once your build is done (which takes usually around 10 to 20 seconds) you can enjoy Vulpes in your browser locally on : 
+
+http://127.0.0.1:8080/?path=127.0.0.1:6080
+
+Or if you deployed vulpes on a server/remote machine :
+
+http://YOUR_SERVER_IP:8080/?path=YOUR_SERVER_IP:6080
+
 
 > **IMPORTANT** : This default docker-compose configuration exposes three ports on your machine's 0.0.0.0 : 8000 (noVNC web interface), 6080 (websockify) and 5900 (VNC). Make sure you trust machines on your local network if you keep this default configuration and change the default VNC password that is *CHANGEME* in the *docker-compose-win-novnc.yml* file. I repeat : those three services are exposed on your machine's network interfaces by default!
 
