@@ -2,7 +2,7 @@ FROM alpine
 
 # Installing required packages for minimal functioning
 RUN apk add --no-cache curl sudo x11vnc tigervnc xvfb dbus-x11 \
-    xfce4 xfce4-terminal xfce4-screensaver bash screen python3 py3-pip pwgen websockify
+    xfce4 xfce4-terminal xfce4-screensaver bash screen python3 py3-pip pwgen websockify gcompat bind-tools
 #RUN pip install websockify
 RUN apk add --no-cache nerd-fonts --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
 
