@@ -53,6 +53,8 @@ COPY ./setup/wallpaper.png /usr/share/backgrounds/xfce/vulpes.png
 # In case run.sh has been edited on windows
 RUN dos2unix /run.sh && dos2unix /etc/setup/postinstall.sh && dos2unix /etc/setup/xinitscript.sh && dos2unix /etc/setup/postinstall.sh
 
+COPY scripts /shared/setup_scripts/
+
 EXPOSE 5900
 
 CMD ["/run.sh"]
