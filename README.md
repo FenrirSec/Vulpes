@@ -51,4 +51,9 @@ Once built (usually in 10 to 20 seconds), access Vulpes in your browser:
 - socat
 - John the Ripper
 
+## Additional Installable tools
+
+- Metasploit Framework
+- CrackMapExec
+
 Dive in and hack away! 🚀
