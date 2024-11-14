@@ -2,7 +2,7 @@
 
 All-in-one Docker-based workstation with hacking tools for Pentesting and offsec Labs, maintained by [@Fenrir.pro](https://github.com/fenrirsec).
 
-![logo](./vulpes/setup/logo.png)
+![logo](./docs/banner.png)
 
 Based on **Alpine Linux**, Vulpes is clutter-free, lightweight, and perfect for penetration testing, local training, workshops, and online classes on [hack.courses](https://hack.courses).
 

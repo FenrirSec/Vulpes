@@ -10,10 +10,11 @@ services:
       PORT: 6080
       PASSWORD: CHANGEME
     ports:
-      - 6080:6080
-      - 5900:5900
+      - "6080:6080"
+      - "5900:5900"
+      - "2222:22"
     volumes:
-      - $HOME/Shared:/shared:ro
+      - $HOME/Shared:/shared
     cap_add:
       - NET_ADMIN
     privileged: true
