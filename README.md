@@ -53,7 +53,10 @@ Once built (usually in 10 to 20 seconds), access Vulpes in your browser:
 
 ## Additional Installable tools
 
+Scripts are provided for easy installations of:
+
 - Metasploit Framework
 - CrackMapExec
+- Villain (C2)
 
 Dive in and hack away! 🚀
