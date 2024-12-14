@@ -43,3 +43,5 @@ xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitorVNC-0/w
 xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitorVNC-0/workspace3/last-image --set /usr/share/backgrounds/xfce/vulpes.png
 
 touch $HOME/.setupdone
+
+xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitorVNC-0/workspace0/last-image --set /usr/share/backgrounds/xfce/vulpes.png

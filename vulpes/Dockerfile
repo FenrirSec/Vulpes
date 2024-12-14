@@ -1,4 +1,4 @@
-FROM alpine
+FROM alpine:3.20.3
 
 # Installing required packages for minimal functioning
 RUN apk add --no-cache curl sudo x11vnc tigervnc xvfb dbus-x11 \
@@ -37,6 +37,7 @@ RUN chown -R "vulpes:vulpes" "/home/vulpes"
 # Installing additional packages
 RUN apk add $(cat /etc/setup/.defaultpackages)
 RUN curl -s https://ohmyposh.dev/install.sh | bash -s
+RUN cp /root/.local/bin/oh-my-posh /bin/
 
 # Removing broken power manager
 RUN sed -i 's/<property name="plugin-9" type="string" value="power-manager-plugin"\/>//g' /etc/xdg/xfce4/panel/default.xml
@@ -53,7 +54,8 @@ COPY ./setup/wallpaper.png /usr/share/backgrounds/xfce/vulpes.png
 # In case run.sh has been edited on windows
 RUN dos2unix /run.sh && dos2unix /etc/setup/postinstall.sh && dos2unix /etc/setup/xinitscript.sh && dos2unix /etc/setup/postinstall.sh
 
-COPY scripts /shared/setup_scripts/
+COPY scripts /setup_scripts/
+RUN mv /setup_scripts/install.sh /usr/bin/install && chmod +x /usr/bin/install
 
 EXPOSE 5900
 
