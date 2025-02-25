@@ -65,5 +65,14 @@ Scripts are provided for easy installations of:
 - Metasploit Framework
 - CrackMapExec
 - Villain (C2)
+- BurpSuite Community Edition
+- dirb
+- nuclei
+- shellGPT
+- sqlmap
+- ffuf
+- Metasploit Framework
+
+And more!
 
 Dive in and hack away! 🚀
