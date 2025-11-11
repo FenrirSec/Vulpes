@@ -1,0 +1,25 @@
+version: "3.3"
+
+services:
+
+  workstation:
+    image: vulpes:latest
+    build: ./vulpes
+    hostname: vulpes
+    environment:
+      PORT: 6080
+      PASSWORD: CHANGEME
+    ports:
+      - 8000:8000
+      - 8080:8080
+      - 8081:8081
+      - 8082:8082
+      - "4433:4433/tcp"
+      - "4433:4433/udp"
+      - "10000-10100:10000-10100"
+    volumes:
+      - ./Shared:/shared:ro
+      - ./vulpkg:/var/lib/vulpkg/repo
+    cap_add:
+      - NET_ADMIN
+    privileged: true

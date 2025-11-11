@@ -1,0 +1,18 @@
+[
+  {
+    "id": "code",
+    "name": "VS Code",
+    "icon": "💻",
+    "type": "executable",
+    "executable": "code",
+    "category": "development"
+  },
+  {
+    "id": "terminal",
+    "name": "Terminal",
+    "icon": "terminal",
+    "type": "tui",
+    "command": null,
+    "category": "system"
+  }
+]

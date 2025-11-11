@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Vulpes Desktop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="desktop">
+        <!-- Mobile Swipe Area for App Switcher -->
+        <div class="mobile-swipe-area" id="mobileSwipeArea"></div>
+        
+        <!-- Scroll Elements -->
+        <div class="right-edge-scroll" id="rightEdgeScroll"></div>
+        <div class="mobile-scroll-hint" id="mobileScrollHint">Scroll</div>
+
+        <!-- Notifications Bar -->
+        <div class="notifications-bar" id="notificationsBar"></div>
+
+        <!-- Mobile App Switcher -->
+        <div class="mobile-app-switcher" id="mobileAppSwitcher">
+            <div class="mobile-app-switcher-header">
+                <div class="mobile-app-switcher-title">Running Apps</div>
+                <button class="mobile-app-switcher-close" id="mobileAppSwitcherClose">×</button>
+            </div>
+            <div class="mobile-apps-grid"></div>
+        </div>
+
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-logo">Vulpes</div>
+                <button class="topbar-btn" id="appsBtn" title="Applications">
+                    <div class="icon-grid">
+                        <span></span><span></span><span></span>
+                        <span></span><span></span><span></span>
+                        <span></span><span></span><span></span>
+                    </div>
+                </button>
+                <button class="topbar-btn" id="windowsBtn" title="Windows">
+                    <div class="icon-windows">☰</div>
+                </button>
+                <button class="topbar-btn" id="settingsBtn" title="Settings">
+                    <div class="icon-gear"></div>
+                </button>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-time" id="clock">--:--</div>
+            </div>
+        </div>
+
+        <!-- Workspace -->
+        <div class="workspace" id="workspace"></div>
+
+        <!-- App Launcher (will be populated dynamically) -->
+        <div class="app-launcher" id="appLauncher"></div>
+
+        <!-- Window Manager Panel -->
+        <div class="window-manager-panel" id="windowManagerPanel">
+            <div class="window-manager-header">
+                <div class="window-manager-title">Open Windows</div>
+            </div>
+            <div class="window-manager-content" id="windowManagerContent">
+                <div class="window-manager-empty">No windows open</div>
+            </div>
+        </div>
+
+        <!-- Dock -->
+        <div class="dock" id="dock"></div>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settingsPanel">
+            <div class="settings-header">
+                <div class="settings-title">Settings</div>
+                <button class="settings-close" id="settingsClose">×</button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <div class="settings-section-title">Appearance</div>
+                    <div class="settings-item">
+                        <div class="settings-item-label">Theme</div>
+                        <div class="theme-toggle">
+                            <button id="dark-button" class="theme-btn active" data-theme="dark">Dark</button>
+                            <button id="light-button" class="theme-btn" data-theme="light">Light</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <div class="settings-section-title">Credits</div>
+                    <div class="settings-item" style="display: block; padding: 12px;">
+                        <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                            Background image by <a href="https://unsplash.com/@agk42" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent);">Alex Knight</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

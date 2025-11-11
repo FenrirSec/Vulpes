@@ -1,0 +1,14 @@
+{
+  "resize_mode": "resize-x11",
+  "transport": "websocket",
+  "image_quality": 100,
+  "dpi": 300,
+  "max_width": 3440,
+  "max_height": 1444,
+  "max_fps": 30,
+  "can_start_executables": true,
+  "webtransport_host": "localhost",
+  "host": "0.0.0.0",
+  "cors_unsafe_allow_all": true,
+  "image_format": "JPEG"
+}

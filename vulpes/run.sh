@@ -6,15 +6,8 @@
 #    PASSWORD=$(pwgen 14)
 #    echo "Password is : $PASSWORD"
 #fi
-
-su -c "echo -e \"$PASSWORD\n$PASSWORD\nn\n\" | vncpasswd" vulpes
-
-#unset PASSWORD
-
-su -c "vncserver :0" vulpes&
-
-if [[ "$PORT" == "" ]]; then
-    PORT=6080
-fi
-
-exec websockify  $PORT localhost:5900
+sleep 3
+cd /opt/webos && source ./env/bin/activate && webx11 &
+cd /opt/webos && python3 -m http.server &
+cd /opt/webos && source ./env/bin/activate && python3 apps.py
+tail -f /dev/null
