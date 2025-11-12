@@ -2,7 +2,7 @@
   {
     "id": "code",
     "name": "VS Code",
-    "icon": "💻",
+    "icon": "terminal",
     "type": "executable",
     "executable": "code",
     "category": "development"
@@ -14,5 +14,23 @@
     "type": "tui",
     "command": null,
     "category": "system"
+  },
+  {
+    "id": "hacktricks",
+    "name": "HackTricks",
+    "icon": "hacktricks",
+    "type": "url",
+    "url": "https://book.hacktricks.wiki",
+      "category": "internet",
+      "proxy": true
+  },
+  {
+    "id": "caido",
+    "name": "caido",
+    "icon": "caido",
+    "type": "url",
+      "url": "http://127.0.0.1:8083",
+      "category": "tools",
+      "proxy": false
   }
 ]

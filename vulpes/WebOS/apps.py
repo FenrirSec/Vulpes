@@ -70,6 +70,7 @@ class Application(BaseModel):
     executable: Optional[str] = None
     url: Optional[str] = None
     command: Optional[str] = None  # for TUI apps
+    proxy: Optional[bool] = True  # whether to proxy URL apps (default: True)
     category: Optional[str] = "utility"
     description: Optional[str] = None
 

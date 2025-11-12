@@ -1,10 +1,9 @@
-FROM alpine:3.20.3
+FROM frolvlad/alpine-glibc:alpine-3.22_glibc-2.42
 
 # Installing required packages for minimal functioning
-RUN apk add --no-cache curl sudo xvfb dbus-x11 \
-    xfce4 xfce4-terminal xfce4-screensaver bash screen python3 python3-dev py3-pip pwgen websockify gcompat bind-tools
+RUN apk add --no-cache curl sudo xvfb dbus-x11 xfce4 lxterminal bash screen python3 python3-dev py3-pip pwgen websockify  bind-tools
 
-RUN apk add --no-cache nerd-fonts-all --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
+#RUN apk add --no-cache nerd-fonts-all --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
 
 # Copying files to the container
 COPY run.sh /run.sh
@@ -19,7 +18,16 @@ RUN echo '%wheel ALL=(ALL) ALL' > /etc/sudoers.d/wheel
 RUN adduser vulpes wheel
 RUN echo "vulpes:vulpes" | chpasswd
 
-## Final setup steps
+# Copying apps and icons files
+COPY applications /home/vulpes/.local/share/applications
+COPY icons /home/vulpes/.local/share/icons
+
+# Copying config files
+COPY setup/bashrc /home/vulpes/.bashrc
+RUN mkdir -p /home/vulpes/.config/i3
+COPY setup/i3config /home/vulpes/.config/i3/config
+
+## User home permissions
 RUN chown -R "vulpes:vulpes" "/home/vulpes"
 
 # Installing additional packages
@@ -35,16 +43,8 @@ RUN dos2unix /run.sh && dos2unix /etc/setup/postinstall.sh && dos2unix /etc/setu
 COPY scripts /setup_scripts/
 RUN mv /setup_scripts/install.sh /usr/bin/install && chmod +x /usr/bin/install
 
-# Copying apps and icons files
-COPY applications /home/vulpes/.local/share/applications
-COPY icons /home/vulpes/.local/share/icons
-
-# Copying bashrc file
-COPY setup/bashrc /home/vulpes/.bashrc
-RUN chown -R vulpes:vulpes /home/vulpes/.bashrc
-
 # WebOS Setup
-RUN apk add --no-cache musl-dev gcompat openssl-dev openssl btop htop mousepad thunar btop vlc keepassxc
+RUN apk add --no-cache musl-dev openssl-dev openssl btop htop mousepad thunar btop vlc keepassxc
 
 COPY WebOS /opt/webos
 
@@ -52,10 +52,19 @@ COPY xterm_rs /opt/webos/xterm_rs
 
 RUN chown -R vulpes:vulpes /opt/webos
 
+RUN ln -s /opt/webos/env/bin/vulpkg /usr/bin/vulpkg
+
+#RUN chmod -R 777 /var/lib/vulpkg/ && chmod -R 777 /opt/vulpkg/
+
 USER vulpes
 
-RUN cd /opt/webos && rm -fr env && virtualenv env && source env/bin/activate && pip install websockets Pillow python-xlib git+https://github.com/lp1dev/WebX11.git git+https://github.com/FenrirSec/vulpkg.git && true
+# Setting up Python env
+RUN cd /opt/webos && rm -fr env && virtualenv env && source env/bin/activate && pip install websockets Pillow python-xlib git+https://github.com/lp1dev/WebX11.git git+https://github.com/FenrirSec/vulpkg.git fastapi uvicorn httpx && true
 
-RUN cd /opt/webos && source env/bin/activate && pip install fastapi uvicorn httpx
+# Vulpkg binary setup
+
+RUN mkdir ~/.local/bin && echo -e "\nPATH=$PATH:$HOME/.local/bin/" >> ~/.bashrc
+
+RUN ln -s /opt/webos/env/bin/vulpkg ~/.local/bin/vulpkg
 
 CMD ["/run.sh"]

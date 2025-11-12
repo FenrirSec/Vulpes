@@ -204,24 +204,17 @@ class Window {
                 contentDiv.appendChild(iframe);
                 
                 this.waitForCanvasReady(iframe, contentDiv);
+                this.monitorCanvas(iframe);
             } else if (this.app.type === 'url') {
                 await this.loadUrl(contentDiv);
                 if (loading) loading.remove();
-            } else if ((this.app.type === 'tui' || this.app.type === 'terminal') && this.terminalPort) {
-                // Reconnect to existing terminal
-                const iframe = document.createElement('iframe');
-                iframe.src = `${window.location.protocol}//${window.location.hostname}:8080:${this.terminalPort}/term`;
-                iframe.style.width = '100%';
-                iframe.style.height = '100%';
-                contentDiv.appendChild(iframe);
+            } else if (this.app.type === 'tui' || this.app.type === 'terminal') {
+                // Always start fresh terminal session on reconnect
+                await this.loadTerminal(contentDiv);
                 if (loading) loading.remove();
-            } else {
-                // If we can't reconnect, load fresh
-                await this.loadContent();
             }
         } catch (error) {
             console.error('Failed to reconnect content:', error);
-            // Fall back to loading fresh content
             await this.loadContent();
         }
     }
@@ -260,26 +253,38 @@ class Window {
         iframe.style.height = '100%';
         contentDiv.appendChild(iframe);
         
-        // Wait for canvas to match iframe size before removing loading
+        // Wait for canvas to appear and monitor for closure
         this.waitForCanvasReady(iframe, contentDiv);
+        this.monitorCanvas(iframe);
     }
 
     async loadUrl(contentDiv) {
-        const proxyUrl = `${APPS_API_BASE}/proxy?url=${encodeURIComponent(this.app.url)}`;
+        // Check if app should be proxied (default: true for compatibility)
+        const shouldProxy = this.app.proxy !== false;
         
         const iframe = document.createElement('iframe');
-        iframe.src = proxyUrl;
+        
+        if (shouldProxy) {
+            const proxyUrl = `${APPS_API_BASE}/proxy?url=${encodeURIComponent(this.app.url)}`;
+            iframe.src = proxyUrl;
+            iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups';
+            
+            // Handle navigation for proxied URLs
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'navigate') {
+                    iframe.src = `${APPS_API_BASE}/proxy?url=${encodeURIComponent(event.data.url)}`;
+                }
+            });
+        } else {
+            // Direct URL without proxy
+            iframe.src = this.app.url;
+            iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation';
+        }
+        
         iframe.style.width = '100%';
         iframe.style.height = '100%';
-        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups';
         
         contentDiv.appendChild(iframe);
-
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'navigate') {
-                iframe.src = `${APPS_API_BASE}/proxy?url=${encodeURIComponent(event.data.url)}`;
-            }
-        });
     }
 
     async loadTerminal(contentDiv) {
@@ -309,28 +314,15 @@ class Window {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
                 if (!iframeDoc) return false;
 
-                const canvas = iframeDoc.querySelector('canvas');
-                if (!canvas) return false;
-
-                const iframeRect = iframe.getBoundingClientRect();
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
-                
-                // Check if canvas dimensions are close to iframe dimensions (within 10px tolerance)
-                const widthMatch = Math.abs(canvasWidth - iframeRect.width) < 10;
-                const heightMatch = Math.abs(canvasHeight - iframeRect.height) < 10;
-                
-                // Also check that canvas has non-zero dimensions
-                const hasValidSize = canvasWidth > 0 && canvasHeight > 0;
-
-                return widthMatch && heightMatch && hasValidSize;
+                const canvas = iframeDoc.querySelector('canvas#windowImage');
+                // Just check if canvas exists with reasonable dimensions
+                return canvas && canvas.width > 100 && canvas.height > 100;
             } catch (e) {
-                // Cross-origin or other access error
                 return false;
             }
         };
 
-        // Set up polling to check canvas readiness
+        // Faster polling for quicker detection
         const pollInterval = setInterval(() => {
             if (checkCanvas()) {
                 clearInterval(pollInterval);
@@ -338,47 +330,53 @@ class Window {
                     loading.remove();
                 }
             }
-        }, 100);
+        }, 50);
 
-        // Set up MutationObserver as backup for faster detection
-        iframe.addEventListener('load', () => {
-            try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                if (!iframeDoc) return;
-
-                const observer = new MutationObserver(() => {
-                    if (checkCanvas()) {
-                        observer.disconnect();
-                        clearInterval(pollInterval);
-                        if (loading && loading.parentNode) {
-                            loading.remove();
-                        }
-                    }
-                });
-
-                observer.observe(iframeDoc.body || iframeDoc.documentElement, {
-                    childList: true,
-                    subtree: true,
-                    attributes: true,
-                    attributeFilter: ['width', 'height']
-                });
-
-                // Cleanup observer after 10 seconds if not triggered
-                setTimeout(() => {
-                    observer.disconnect();
-                }, 10000);
-            } catch (e) {
-                // Cross-origin - rely on polling only
-            }
-        });
-
-        // Timeout fallback - remove loading after 10 seconds regardless
+        // Shorter timeout - remove loading after 3 seconds
         setTimeout(() => {
             clearInterval(pollInterval);
             if (loading && loading.parentNode) {
                 loading.remove();
             }
-        }, 10000);
+        }, 3000);
+    }
+
+    monitorCanvas(iframe) {
+        // Monitor canvas for app closure (all black/empty)
+        const checkInterval = setInterval(() => {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                if (!iframeDoc) return;
+
+                const canvas = iframeDoc.querySelector('canvas#windowImage');
+                if (!canvas) return;
+
+                // Check if canvas is completely empty/black
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const pixels = imageData.data;
+                
+                // Check if all pixels are black (or empty)
+                let allBlack = true;
+                for (let i = 0; i < pixels.length; i += 4) {
+                    if (pixels[i] > 5 || pixels[i+1] > 5 || pixels[i+2] > 5) {
+                        allBlack = false;
+                        break;
+                    }
+                }
+                
+                if (allBlack) {
+                    console.log('Canvas is empty, closing window:', this.app.name);
+                    clearInterval(checkInterval);
+                    this.close();
+                }
+            } catch (e) {
+                // Ignore cross-origin errors
+            }
+        }, 2000); // Check every 2 seconds
+
+        // Clean up interval when window closes
+        this.canvasMonitorInterval = checkInterval;
     }
 
     focus() {
@@ -417,6 +415,11 @@ class Window {
     }
 
     async close() {
+        // Clean up canvas monitor
+        if (this.canvasMonitorInterval) {
+            clearInterval(this.canvasMonitorInterval);
+        }
+        
         // Remove from server session first
         await deleteWindowState(this.id);
         
@@ -506,16 +509,12 @@ class Window {
 
     hideContent() {
         const contentDiv = this.element.querySelector('.window-content');
-        if (contentDiv) {
-            contentDiv.style.visibility = 'hidden';
-        }
+        if (contentDiv) contentDiv.style.visibility = 'hidden';
     }
 
     showContent() {
         const contentDiv = this.element.querySelector('.window-content');
-        if (contentDiv) {
-            contentDiv.style.visibility = 'visible';
-        }
+        if (contentDiv) contentDiv.style.visibility = 'visible';
     }
     
     async finishResize() {
@@ -575,7 +574,7 @@ async function saveWindowState(window) {
         await fetch(`${APPS_API_BASE}/session/window`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // Include cookies
+            credentials: 'include',
             body: JSON.stringify(window.toJSON())
         });
         console.log('Window state saved:', window.id);
@@ -590,7 +589,7 @@ async function deleteWindowState(windowId) {
     try {
         await fetch(`${APPS_API_BASE}/session/window/${windowId}`, {
             method: 'DELETE',
-            credentials: 'include' // Include cookies
+            credentials: 'include'
         });
         console.log('Window state deleted:', windowId);
     } catch (error) {
@@ -601,7 +600,7 @@ async function deleteWindowState(windowId) {
 async function getSession() {
     try {
         const response = await fetch(`${APPS_API_BASE}/session`, {
-            credentials: 'include' // Important: include cookies
+            credentials: 'include'
         });
         const data = await response.json();
         sessionId = data.session_id;
@@ -708,7 +707,6 @@ document.addEventListener('mouseup', () => {
         }
     }
     if (resizeState) {
-        // Finish resizing and send to API
         const win = resizeState.window;
         resizeState = null;
         document.body.style.cursor = '';
@@ -777,7 +775,7 @@ function renderApplications() {
         launcher.appendChild(appItem);
 
         // Dock item (only for pinned/common apps)
-        if (['firefox', 'terminal', 'thunar', 'code', 'burp'].includes(app.id)) {
+        if (['firefox', 'terminal', 'thunar', 'code', 'burp', 'hacktricks'].includes(app.id)) {
             const dockItem = document.createElement('div');
             dockItem.className = 'dock-item';
             dockItem.innerHTML = `
@@ -800,11 +798,10 @@ function launchApp(app) {
     updateWindowManager();
 }
 
-// Window Manager UI - FIXED VERSION
+// Window Manager UI
 function updateWindowManager() {
     const content = document.getElementById('windowManagerContent');
     
-    // Create the content element if it doesn't exist
     if (!content) {
         const panel = document.getElementById('windowManagerPanel');
         if (panel) {
@@ -816,7 +813,6 @@ function updateWindowManager() {
                 panel.appendChild(newContent);
             }
         }
-        // Try again after creating
         return updateWindowManager();
     }
     
@@ -847,7 +843,6 @@ function updateWindowManager() {
             <button class="window-manager-item-close" data-window-id="${win.id}" title="Close">×</button>
         `;
         
-        // Click to focus/restore window
         item.addEventListener('click', (e) => {
             if (e.target.classList.contains('window-manager-item-close')) return;
             
@@ -858,7 +853,6 @@ function updateWindowManager() {
             document.getElementById('windowManagerPanel').classList.remove('open');
         });
         
-        // Close button
         const closeBtn = item.querySelector('.window-manager-item-close');
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -959,7 +953,7 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
     });
 });
 
-// Close app launcher when clicking outside
+// Close panels when clicking outside
 document.addEventListener('click', (e) => {
     const launcher = document.getElementById('appLauncher');
     const appsBtn = document.getElementById('appsBtn');
