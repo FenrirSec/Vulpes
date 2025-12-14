@@ -8,7 +8,7 @@ services:
     hostname: vulpes
     environment:
       PORT: 6080
-      PASSWORD: CHANGEME
+      PASSWORD: vulpes123
     ports:
       - 8000:8000
       - 8080:8080
@@ -19,8 +19,10 @@ services:
       - "4433:4433/udp"
       - "10000-10100:10000-10100"
     volumes:
-      - ./Shared:/shared:ro
+      - ./Shared:/shared
       - ./vulpkg:/var/lib/vulpkg/repo
+      - ./applications:/home/vulpes/.local/share/applications
+      - ./icons:/home/vulpes/.local/share/icons
     cap_add:
       - NET_ADMIN
     privileged: true

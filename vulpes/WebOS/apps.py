@@ -1,21 +1,26 @@
-from fastapi import FastAPI, HTTPException, Cookie, Response
+from fastapi import FastAPI, HTTPException, Cookie, Response, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response as FastAPIResponse, HTMLResponse, FileResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from typing import List, Optional
 import httpx
 import subprocess
 import json
-import uuid
 import os
 from pathlib import Path
 import configparser
 import base64
 import mimetypes
+import secrets
 
 HOST = "0.0.0.0"
 
+AUTH_USERNAME = "vulpes"
+AUTH_PASSWORD = os.getenv("PASSWORD") if os.getenv("PASSWORD") else "vulpes"
+
 app = FastAPI(title="WebOS Applications API")
+security = HTTPBasic()
 
 # Enable CORS with credentials
 app.add_middleware(
@@ -30,8 +35,8 @@ app.add_middleware(
 running_terminals = {}  # {port: process}
 next_port = 10000
 
-# Session management
-sessions = {}  # {session_id: {windows: [{type, id, data}]}}
+# Single global session - no more per-user sessions
+global_session = {"windows": []}
 
 # Applications configuration file
 APPS_CONFIG_FILE = "applications.json"
@@ -52,31 +57,26 @@ ICON_PATHS = [
     "/var/lib/vulpkg/icons"
 ]
 
-# Cache for applications with file modification tracking
-applications_cache = {
-    "data": None,
-    "mtime": None
-}
-
 class TermRequest(BaseModel):
     command: Optional[str]
 
 class Application(BaseModel):
     id: str
     name: str
-    icon: str  # Can be emoji, icon name, or base64 data URI
-    iconPath: Optional[str] = None  # Actual path to icon file
-    type: str  # "executable", "url", "terminal", "tui"
+    icon: str
+    iconPath: Optional[str] = None
+    type: str
     executable: Optional[str] = None
     url: Optional[str] = None
-    command: Optional[str] = None  # for TUI apps
-    proxy: Optional[bool] = True  # whether to proxy URL apps (default: True)
+    command: Optional[str] = None
+    proxy: Optional[bool] = True
     category: Optional[str] = "utility"
     description: Optional[str] = None
+    docked: Optional[bool] = False
 
 class WindowState(BaseModel):
-    type: str  # "executable", "url", "terminal", "tui"
-    id: str  # display_id or port or url_id
+    type: str
+    id: str
     app_id: str
     title: str
     icon: str
@@ -89,34 +89,41 @@ class WindowState(BaseModel):
     displayId: Optional[int] = None
     terminalPort: Optional[int] = None
     zIndex: Optional[int] = None
-    data: Optional[dict] = None  # Additional data (url, command, etc.)
+    data: Optional[dict] = None
+
+def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    """Verify HTTP Basic Auth credentials"""
+    is_correct_username = secrets.compare_digest(credentials.username, AUTH_USERNAME)
+    is_correct_password = secrets.compare_digest(credentials.password, AUTH_PASSWORD)
+    
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 def find_icon_file(icon_name: str) -> Optional[str]:
     """Find an icon file by name in standard icon directories"""
     if not icon_name:
         return None
     
-    # If it's already an absolute path and exists, return it
     if os.path.isabs(icon_name) and os.path.exists(icon_name):
         return icon_name
     
-    # Common icon extensions
     extensions = ['.png', '.svg', '.xpm', '.jpg', '.jpeg', '.ico']
     
-    # If the icon_name already has an extension, just use that
     if any(icon_name.endswith(ext) for ext in extensions):
         search_names = [icon_name]
     else:
         search_names = [f"{icon_name}{ext}" for ext in extensions]
-        # Also search without extension for theme icons
         search_names.append(icon_name)
     
-    # Search in icon paths
     for icon_dir in ICON_PATHS:
         if not os.path.exists(icon_dir):
             continue
         
-        # Search recursively for the icon
         for root, dirs, files in os.walk(icon_dir):
             for search_name in search_names:
                 if search_name in files:
@@ -132,13 +139,10 @@ def icon_to_data_uri(icon_path: str) -> Optional[str]:
             print('Error: Invalid icon path provided', icon_path)
             return None
         
-        # Get MIME type
         mime_type, _ = mimetypes.guess_type(icon_path)
         if not mime_type:
-            # Default to png if cannot determine
             mime_type = "image/png"
         
-        # Read and encode the file
         with open(icon_path, 'rb') as f:
             icon_data = f.read()
         
@@ -160,7 +164,6 @@ def parse_desktop_file(filepath: str) -> Optional[dict]:
         
         entry = config['Desktop Entry']
         
-        # Skip if not an application or is hidden/no display
         if entry.get('Type', '') != 'Application':
             return None
         if entry.get('NoDisplay', 'false').lower() == 'true':
@@ -168,7 +171,6 @@ def parse_desktop_file(filepath: str) -> Optional[dict]:
         if entry.get('Hidden', 'false').lower() == 'true':
             return None
         
-        # Extract basic info
         name = entry.get('Name', '')
         if not name:
             return None
@@ -177,19 +179,15 @@ def parse_desktop_file(filepath: str) -> Optional[dict]:
         if not exec_cmd:
             return None
         
-        # Clean up Exec command (remove %f, %F, %u, %U, etc.)
         exec_cmd = ' '.join([part for part in exec_cmd.split() if not part.startswith('%')])
         
-        # Get icon
         icon_name = entry.get('Icon', '')
         icon_path = find_icon_file(icon_name) if icon_name else None
-        
-        # Convert icon to data URI if found
         icon_data_uri = icon_to_data_uri(icon_path) if icon_path else None
         
-        # Determine category
         categories = entry.get('Categories', '').split(';')
         category = 'utility'
+        docked = entry.get('Docked') is not None
         
         category_map = {
             'Development': 'development',
@@ -209,10 +207,7 @@ def parse_desktop_file(filepath: str) -> Optional[dict]:
                 category = category_map[cat]
                 break
         
-        # Create application ID from filename
         app_id = os.path.splitext(os.path.basename(filepath))[0]
-        
-        # Check if it should be terminal
         terminal = entry.get('Terminal', 'false').lower() == 'true'
         
         return {
@@ -224,7 +219,8 @@ def parse_desktop_file(filepath: str) -> Optional[dict]:
             'executable': exec_cmd if not terminal else None,
             'command': exec_cmd if terminal else None,
             'category': category,
-            'description': entry.get('Comment', '')
+            'description': entry.get('Comment', ''),
+            'docked': docked
         }
      
     except Exception as e:
@@ -260,13 +256,9 @@ def load_manual_applications() -> List[dict]:
         with open(APPS_CONFIG_FILE, 'r') as f:
             manual_apps = json.load(f)
             
-        # Convert icon paths to data URIs for manual apps
         for app in manual_apps:
-            # Get icon
             icon_name = app.get('icon', '')
             icon_path = find_icon_file(icon_name) if icon_name else None
-        
-            # Convert icon to data URI if found
             icon_data_uri = icon_to_data_uri(icon_path) if icon_path else None
             if icon_data_uri:
                     app['icon'] = icon_data_uri
@@ -278,38 +270,21 @@ def load_manual_applications() -> List[dict]:
 
 def load_applications() -> List[Application]:
     """Load applications from both .desktop files and manual configuration"""
-    # Load from .desktop files
     desktop_apps = load_desktop_files()
-    
-    # Load from manual configuration
     manual_apps = load_manual_applications()
     
-    # Combine both, with manual apps taking precedence
     all_apps = {}
     
-    # Add desktop apps first
     for app in desktop_apps:
         all_apps[app['id']] = app
     
-    # Override/add manual apps
     for app in manual_apps:
         all_apps[app['id']] = app
     
-    # Convert to Application objects
     applications = [Application(**app) for app in all_apps.values()]
     
     print(f"✓ Loaded {len(applications)} applications ({len(desktop_apps)} from .desktop files, {len(manual_apps)} manual)")
     return applications
-
-def get_or_create_session(session_id: Optional[str]) -> str:
-    """Get or create a session ID"""
-    if not session_id or session_id not in sessions:
-        session_id = str(uuid.uuid4())
-        sessions[session_id] = {"windows": []}
-        print(f"Created new session: {session_id}")
-    else:
-        print(f"Using existing session: {session_id}")
-    return session_id
 
 def get_next_port():
     global next_port
@@ -336,34 +311,22 @@ async def shutdown_event():
 
 @app.get("/")
 async def root():
-    return {"message": "WebOS Applications API", "version": "2.1"}
+    return {"message": "WebOS Applications API", "version": "3.0"}
 
 @app.get("/session")
-async def get_session(session_id: Optional[str] = Cookie(None), response: Response = None):
-    """Get or create a session and return saved windows"""
-    new_session_id = get_or_create_session(session_id)
-    if response:
-        # Set cookie with proper settings for persistence
-        response.set_cookie(
-            key="session_id", 
-            value=new_session_id, 
-            httponly=False,  # Allow JavaScript to read it for debugging
-            samesite="lax",
-            max_age=86400*30  # 30 days
-        )
-    
-    windows = sessions[new_session_id]["windows"]
-    print(f"Session {new_session_id} has {len(windows)} windows")
-    
-    return {"session_id": new_session_id, "windows": windows}
+async def get_session(username: str = Depends(verify_credentials)):
+    """Get global session windows"""
+    windows = global_session["windows"]
+    print(f"User {username} accessing global session with {len(windows)} windows")
+    return {"windows": windows}
 
 @app.get("/applications", response_model=List[Application])
-async def get_applications():
+async def get_applications(username: str = Depends(verify_credentials)):
     """Get list of all available applications"""
     return load_applications()
 
 @app.get("/applications/{app_id}", response_model=Application)
-async def get_application(app_id: str):
+async def get_application(app_id: str, username: str = Depends(verify_credentials)):
     """Get a specific application by ID"""
     apps = load_applications()
     app = next((app for app in apps if app.id == app_id), None)
@@ -372,13 +335,13 @@ async def get_application(app_id: str):
     return app
 
 @app.get("/applications/category/{category}", response_model=List[Application])
-async def get_applications_by_category(category: str):
+async def get_applications_by_category(category: str, username: str = Depends(verify_credentials)):
     """Get applications filtered by category"""
     apps = load_applications()
     return [app for app in apps if app.category == category]
 
 @app.get("/icon/{app_id}")
-async def get_application_icon(app_id: str):
+async def get_application_icon(app_id: str, username: str = Depends(verify_credentials)):
     """Get the icon file for an application"""
     apps = load_applications()
     app = next((app for app in apps if app.id == app_id), None)
@@ -386,10 +349,8 @@ async def get_application_icon(app_id: str):
     if app is None:
         raise HTTPException(status_code=404, detail="Application not found")
     
-    # If the icon is already a data URI, extract and return it
     if app.icon.startswith('data:'):
         try:
-            # Extract the base64 data from the data URI
             header, data = app.icon.split(',', 1)
             if 'base64' in header:
                 icon_data = base64.b64decode(data)
@@ -398,27 +359,23 @@ async def get_application_icon(app_id: str):
         except Exception as e:
             print(f"Error decoding data URI icon: {e}")
     
-    # Fall back to iconPath
     if not app.iconPath or not os.path.exists(app.iconPath):
         raise HTTPException(status_code=404, detail="Icon file not found")
     
     return FileResponse(app.iconPath)
 
 @app.get("/icon/file/{icon_path:path}")
-async def get_icon_file(icon_path: str):
+async def get_icon_file(icon_path: str, username: str = Depends(verify_credentials)):
     """Serve icon files directly by path"""
     try:
-        # Security: Ensure the path is within allowed directories
         full_path = Path(icon_path)
         if not full_path.is_absolute():
-            # Try to find the icon in standard paths
             found_path = find_icon_file(icon_path)
             if found_path:
                 full_path = Path(found_path)
             else:
                 raise HTTPException(status_code=404, detail="Icon not found")
         
-        # Additional security check
         if not any(str(full_path).startswith(str(allowed_path)) for allowed_path in ICON_PATHS + DESKTOP_FILE_PATHS):
             raise HTTPException(status_code=403, detail="Access denied")
         
@@ -431,46 +388,37 @@ async def get_icon_file(icon_path: str):
         raise HTTPException(status_code=500, detail=f"Error serving icon: {str(e)}")
 
 @app.post("/applications/reload")
-async def reload_applications():
-    """Force reload applications (useful for debugging)"""
+async def reload_applications(username: str = Depends(verify_credentials)):
+    """Force reload applications"""
     apps = load_applications()
     return {"status": "reloaded", "count": len(apps)}
 
 @app.post("/session/window")
-async def save_window(window: WindowState, session_id: Optional[str] = Cookie(None), response: Response = None):
-    """Save or update a window state to session"""
-    session_id = get_or_create_session(session_id)
-    
-    # Check if window already exists, update it
+async def save_window(window: WindowState, username: str = Depends(verify_credentials)):
+    """Save or update a window state to global session"""
     existing_idx = None
-    for idx, w in enumerate(sessions[session_id]["windows"]):
+    for idx, w in enumerate(global_session["windows"]):
         if w["id"] == window.id:
             existing_idx = idx
             break
     
     if existing_idx is not None:
-        sessions[session_id]["windows"][existing_idx] = window.dict()
+        global_session["windows"][existing_idx] = window.dict()
     else:
-        sessions[session_id]["windows"].append(window.dict())
+        global_session["windows"].append(window.dict())
     
-    if response:
-        response.set_cookie(key="session_id", value=session_id, httponly=True, max_age=86400*7)
-    
-    return {"status": "saved", "session_id": session_id}
+    return {"status": "saved"}
 
 @app.delete("/session/window/{window_id}")
-async def remove_window(window_id: str, session_id: Optional[str] = Cookie(None)):
-    """Remove a window from session"""
-    if not session_id or session_id not in sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    sessions[session_id]["windows"] = [
-        w for w in sessions[session_id]["windows"] if w["id"] != window_id
+async def remove_window(window_id: str, username: str = Depends(verify_credentials)):
+    """Remove a window from global session"""
+    global_session["windows"] = [
+        w for w in global_session["windows"] if w["id"] != window_id
     ]
     return {"status": "removed"}
 
 @app.post("/terminal/start")
-async def start_terminal(req: TermRequest = None):
+async def start_terminal(req: TermRequest = None, username: str = Depends(verify_credentials)):
     """Start a new xterm.rs instance"""
     command = None
     if req is not None:
@@ -480,12 +428,10 @@ async def start_terminal(req: TermRequest = None):
     try:
         print("Command is", command)
         if command and command != "null":
-            # Start xterm.rs with custom command (for TUI apps)
             process = subprocess.Popen(
                 ["./xterm_rs", "--host", HOST, "--port", str(port), "--cmd", command],
             )
         else:
-            # Start regular terminal
             process = subprocess.Popen(
                 ["./xterm_rs", "--host", HOST, "--port", str(port)],
             )
@@ -502,7 +448,7 @@ async def start_terminal(req: TermRequest = None):
         raise HTTPException(status_code=500, detail=f"Failed to start terminal: {str(e)}")
 
 @app.delete("/terminal/{port}")
-async def stop_terminal(port: int):
+async def stop_terminal(port: int, username: str = Depends(verify_credentials)):
     """Stop a running terminal"""
     if port not in running_terminals:
         raise HTTPException(status_code=404, detail="Terminal not found")
@@ -510,40 +456,35 @@ async def stop_terminal(port: int):
     return {"status": "stopped"}
 
 @app.get("/terminal/{port}/status")
-async def check_terminal(port: int):
+async def check_terminal(port: int, username: str = Depends(verify_credentials)):
     """Check if a terminal is still running"""
     if port in running_terminals:
         process = running_terminals[port]
         if process.poll() is None:
             return {"status": "running", "port": port}
         else:
-            # Process died, clean up
             cleanup_terminal(port)
             return {"status": "dead", "port": port}
     return {"status": "not_found", "port": port}
 
-@app.get("/proxy", response_class=HTMLResponse)
-async def proxy_url(url: str):
+@app.get("/proxy/{encoded_url}", response_class=HTMLResponse)
+async def proxy_url(encoded_url: str, username: str = Depends(verify_credentials)):
     """Proxy requests to external URLs to avoid CORS/framing issues"""
     try:
+        url = base64.b64decode(encoded_url).decode("utf-8")
         async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
             response = await client.get(url)
             
-            # Get content type
             content_type = response.headers.get("content-type", "text/html")
             
-            # For HTML, inject base tag and link interceptor
             if "text/html" in content_type:
                 content = response.text
                 
-                # Create the intercept script
                 intercept_script = f'''
                 <script>
                 (function() {{
-                    // Intercept all link clicks
                     document.addEventListener('click', function(e) {{
                         let target = e.target;
-                        // Find the closest anchor tag
                         while (target && target.tagName !== 'A') {{
                             target = target.parentElement;
                         }}
@@ -552,10 +493,8 @@ async def proxy_url(url: str):
                             e.preventDefault();
                             e.stopPropagation();
                             
-                            // Get the absolute URL
                             const absoluteUrl = target.href;
                             
-                            // Notify parent to open through proxy
                             window.parent.postMessage({{
                                 type: 'navigate',
                                 url: absoluteUrl
@@ -563,7 +502,6 @@ async def proxy_url(url: str):
                         }}
                     }}, true);
                     
-                    // Also intercept form submissions
                     document.addEventListener('submit', function(e) {{
                         const form = e.target;
                         if (form.tagName === 'FORM') {{
@@ -588,14 +526,12 @@ async def proxy_url(url: str):
                 </script>
                 '''
                 
-                # Inject base tag and script after <head>
                 if "<head>" in content.lower():
                     base_tag = f'<base href="{url}">'
                     injection = base_tag + intercept_script
                     content = content.replace("<head>", f"<head>{injection}", 1)
                     content = content.replace("<HEAD>", f"<HEAD>{injection}", 1)
                 else:
-                    # If no head tag, inject at the beginning
                     content = intercept_script + content
                 
                 return FastAPIResponse(
@@ -607,7 +543,6 @@ async def proxy_url(url: str):
                     }
                 )
             else:
-                # For other content types, return as-is
                 return FastAPIResponse(
                     content=response.content,
                     media_type=content_type

@@ -1,5 +1,9 @@
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:8080`;
-const APPS_API_BASE = `${window.location.protocol}//${window.location.hostname}:8082`;
+const API_BASE = window.location.toString().replace('/8000', '/8080')
+const APPS_API_BASE = window.location.toString().replace('/8000', '/8082')
+//const APPS_API_BASE = window.location.toString().replace('/8000', '/8082') 
+
+// Authentication
+let authCredentials = null;
 
 // Request keyboard lock on mobile
 if (navigator.keyboard && navigator.keyboard.lock) {
@@ -16,7 +20,166 @@ let resizeState = null;
 let isMobile = window.innerWidth <= 768;
 let applications = [];
 let appLoadInterval = null;
-let sessionId = null;
+
+// Get auth headers
+function getAuthHeaders() {
+    if (!authCredentials) return {};
+    const credentials = btoa(`${authCredentials.username}:${authCredentials.password}`);
+    return { 'Authorization': `Basic ${credentials}` };
+}
+
+// Check if authenticated
+async function checkAuth() {
+    const stored = localStorage.getItem('authCredentials');
+    if (stored) {
+        try {
+            authCredentials = JSON.parse(stored);
+            // Verify credentials still work
+            const response = await fetch(`${APPS_API_BASE}/session`, {
+                headers: getAuthHeaders()
+            });
+            if (response.ok) {
+                return true;
+            }
+        } catch (e) {
+            console.error('Auth check failed:', e);
+        }
+    }
+    return false;
+}
+
+// Show login modal
+function showLoginModal() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.95);
+        backdrop-filter: blur(20px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px -15px var(--shadow);
+        ">
+            <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: var(--text-primary);">
+                Vulpes Desktop Login
+            </h2>
+            <form id="loginForm">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-secondary);">
+                        Username
+                    </label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        required
+                        style="
+                            width: 100%;
+                            padding: 12px;
+                            background: var(--bg-tertiary);
+                            border: 1px solid var(--border);
+                            border-radius: var(--radius-sm);
+                            color: var(--text-primary);
+                            font-size: 14px;
+                        "
+                    />
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-secondary);">
+                        Password
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        required
+                        style="
+                            width: 100%;
+                            padding: 12px;
+                            background: var(--bg-tertiary);
+                            border: 1px solid var(--border);
+                            border-radius: var(--radius-sm);
+                            color: var(--text-primary);
+                            font-size: 14px;
+                        "
+                    />
+                </div>
+                <div id="loginError" style="
+                    display: none;
+                    margin-bottom: 16px;
+                    padding: 12px;
+                    background: var(--accent-error);
+                    border-radius: var(--radius-sm);
+                    color: white;
+                    font-size: 12px;
+                "></div>
+                <button 
+                    type="submit"
+                    style="
+                        width: 100%;
+                        padding: 12px;
+                        background: var(--accent);
+                        border: none;
+                        border-radius: var(--radius-sm);
+                        color: white;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.15s ease;
+                    "
+                >
+                    Login
+                </button>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const form = document.getElementById('loginForm');
+    const errorDiv = document.getElementById('loginError');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        
+        authCredentials = { username, password };
+        
+        try {
+            const response = await fetch(`${APPS_API_BASE}/session`, {
+                headers: getAuthHeaders()
+            });
+            
+            if (response.ok) {
+                localStorage.setItem('authCredentials', JSON.stringify(authCredentials));
+                modal.remove();
+                await init();
+            } else {
+                errorDiv.textContent = 'Invalid username or password';
+                errorDiv.style.display = 'block';
+                authCredentials = null;
+            }
+        } catch (error) {
+            errorDiv.textContent = 'Connection error. Please try again.';
+            errorDiv.style.display = 'block';
+            authCredentials = null;
+        }
+    });
+    
+    document.getElementById('username').focus();
+}
 
 // Window class
 class Window {
@@ -86,11 +249,9 @@ class Window {
 
         this.setupEventListeners();
         
-        // Only load content if this is a new window (no displayId/terminalPort from restore)
         if (!this.data.restored) {
             this.loadContent();
         } else {
-            // Window was restored, reconnect to existing session
             this.reconnectContent();
         }
     }
@@ -99,29 +260,27 @@ class Window {
         const titlebar = this.element.querySelector('.window-titlebar');
         const controls = this.element.querySelectorAll('.window-control-btn');
 
-        // Calculate offset to prevent window jump
         titlebar.addEventListener('mousedown', (e) => {
             if (e.target.closest('.window-control-btn')) return;
             
+            console.log('mousedown')
             e.preventDefault();
             e.stopPropagation();
             
             this.focus();
             isDragging = true;
             
-            // Calculate offset from mouse to window top-left corner
             const rect = this.element.getBoundingClientRect();
             dragOffset.x = e.clientX - rect.left;
-            dragOffset.y = e.clientY - rect.top;
+
+            // dragOffset.y = e.clientY - rect.top;
             
-            // Store reference to dragging window
             window.draggingWindow = this;
             
             document.body.style.cursor = 'grabbing';
             this.element.style.transition = 'none';
         });
 
-        // Touch support for mobile
         titlebar.addEventListener('touchstart', (e) => {
             if (e.target.closest('.window-control-btn')) return;
             
@@ -168,7 +327,6 @@ class Window {
         try {
             if (this.app.type === 'executable') {
                 await this.loadExecutable(contentDiv);
-                // Don't remove loading here - waitForCanvasReady will handle it
             } else if (this.app.type === 'url') {
                 await this.loadUrl(contentDiv);
                 if (loading) loading.remove();
@@ -177,7 +335,6 @@ class Window {
                 if (loading) loading.remove();
             }
             
-            // Save window state after content is loaded
             await saveWindowState(this);
         } catch (error) {
             console.error('Failed to load content:', error);
@@ -196,7 +353,6 @@ class Window {
 
         try {
             if (this.app.type === 'executable' && this.displayId) {
-                // Reconnect to existing display
                 const iframe = document.createElement('iframe');
                 iframe.src = `${API_BASE}/display/${this.displayId}`;
                 iframe.style.width = '100%';
@@ -209,7 +365,6 @@ class Window {
                 await this.loadUrl(contentDiv);
                 if (loading) loading.remove();
             } else if (this.app.type === 'tui' || this.app.type === 'terminal') {
-                // Always start fresh terminal session on reconnect
                 await this.loadTerminal(contentDiv);
                 if (loading) loading.remove();
             }
@@ -220,7 +375,6 @@ class Window {
     }
 
     async loadExecutable(contentDiv) {
-        // Request a display from the X11 display API
         const displayRes = await fetch(`${API_BASE}/display`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -231,7 +385,6 @@ class Window {
         const displayData = await displayRes.json();
         this.displayId = displayData.display;
 
-        // Launch the executable on the display
         const execRes = await fetch(`${API_BASE}/display/${this.displayId}/run`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -240,43 +393,41 @@ class Window {
 
         if (!execRes.ok) throw new Error(`Failed to launch executable: HTTP ${execRes.status}`);
 
-        // Resize display to match window content area
         const contentRect = contentDiv.getBoundingClientRect();
-        await fetch(`${API_BASE}/resize/${this.displayId}/${Math.floor(contentRect.width)}/${Math.floor(contentRect.height)}`, {
-            method: 'POST'
-        });
 
-        // Create iframe pointing to the display viewer
+        const displayId = this.displayId;
+	        setTimeout(async function() {
+                await fetch(`${API_BASE}/resize/${displayId}/${Math.floor(contentRect.width)}/${Math.floor(contentRect.height)}`, {
+		            method: 'POST'
+                    });
+	        }, 1000);
+
         const iframe = document.createElement('iframe');
         iframe.src = `${API_BASE}/display/${this.displayId}`;
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         contentDiv.appendChild(iframe);
         
-        // Wait for canvas to appear and monitor for closure
         this.waitForCanvasReady(iframe, contentDiv);
         this.monitorCanvas(iframe);
     }
 
     async loadUrl(contentDiv) {
-        // Check if app should be proxied (default: true for compatibility)
         const shouldProxy = this.app.proxy !== false;
         
         const iframe = document.createElement('iframe');
         
         if (shouldProxy) {
-            const proxyUrl = `${APPS_API_BASE}/proxy?url=${encodeURIComponent(this.app.url)}`;
+            const proxyUrl = `${APPS_API_BASE}/proxy/${btoa(this.app.url)}`;
             iframe.src = proxyUrl;
             iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups';
             
-            // Handle navigation for proxied URLs
             window.addEventListener('message', (event) => {
                 if (event.data.type === 'navigate') {
-                    iframe.src = `${APPS_API_BASE}/proxy?url=${encodeURIComponent(event.data.url)}`;
+                    iframe.src = `${APPS_API_BASE}/proxy/${btoa(event.data.url)}`;
                 }
             });
         } else {
-            // Direct URL without proxy
             iframe.src = this.app.url;
             iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation';
         }
@@ -291,7 +442,7 @@ class Window {
         const command = this.app.command || null;
         const response = await fetch(`${APPS_API_BASE}/terminal/start`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ command })
         });
         
@@ -299,7 +450,7 @@ class Window {
         this.terminalPort = data.port;
 
         const iframe = document.createElement('iframe');
-        iframe.src = data.url;
+        iframe.src = window.location.toString().replace('/8000', `/${data.port.toString()}/term`)
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         contentDiv.appendChild(iframe);
@@ -315,14 +466,12 @@ class Window {
                 if (!iframeDoc) return false;
 
                 const canvas = iframeDoc.querySelector('canvas#windowImage');
-                // Just check if canvas exists with reasonable dimensions
                 return canvas && canvas.width > 100 && canvas.height > 100;
             } catch (e) {
                 return false;
             }
         };
 
-        // Faster polling for quicker detection
         const pollInterval = setInterval(() => {
             if (checkCanvas()) {
                 clearInterval(pollInterval);
@@ -332,7 +481,6 @@ class Window {
             }
         }, 50);
 
-        // Shorter timeout - remove loading after 3 seconds
         setTimeout(() => {
             clearInterval(pollInterval);
             if (loading && loading.parentNode) {
@@ -342,8 +490,8 @@ class Window {
     }
 
     monitorCanvas(iframe) {
-        // Monitor canvas for app closure (all black/empty)
         const checkInterval = setInterval(() => {
+            console.log("Checking canvas")
             try {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
                 if (!iframeDoc) return;
@@ -351,12 +499,10 @@ class Window {
                 const canvas = iframeDoc.querySelector('canvas#windowImage');
                 if (!canvas) return;
 
-                // Check if canvas is completely empty/black
                 const ctx = canvas.getContext('2d');
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const pixels = imageData.data;
                 
-                // Check if all pixels are black (or empty)
                 let allBlack = true;
                 for (let i = 0; i < pixels.length; i += 4) {
                     if (pixels[i] > 5 || pixels[i+1] > 5 || pixels[i+2] > 5) {
@@ -373,9 +519,8 @@ class Window {
             } catch (e) {
                 // Ignore cross-origin errors
             }
-        }, 2000); // Check every 2 seconds
+        }, 2000);
 
-        // Clean up interval when window closes
         this.canvasMonitorInterval = checkInterval;
     }
 
@@ -415,22 +560,21 @@ class Window {
     }
 
     async close() {
-        // Clean up canvas monitor
         if (this.canvasMonitorInterval) {
             clearInterval(this.canvasMonitorInterval);
         }
         
-        // Remove from server session first
         await deleteWindowState(this.id);
         
-        // Close display if it's an executable
         if (this.displayId) {
             await fetch(`${API_BASE}/display/${this.displayId}`, { method: 'DELETE' });
         }
         
-        // Close terminal if it's a terminal/tui
         if (this.terminalPort) {
-            await fetch(`${APPS_API_BASE}/terminal/${this.terminalPort}`, { method: 'DELETE' });
+            await fetch(`${APPS_API_BASE}/terminal/${this.terminalPort}`, { 
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
         }
         
         this.element.remove();
@@ -457,9 +601,7 @@ class Window {
             startBounds: { ...this.bounds }
         };
         
-        // Hide content during resize
         this.hideContent();
-        
         document.body.style.cursor = window.getComputedStyle(e.target).cursor;
     }
 
@@ -492,7 +634,6 @@ class Window {
         this.element.style.width = `${newBounds.width}px`;
         this.element.style.height = `${newBounds.height}px`;
         
-        // Show resize dimensions overlay
         const titlebar = this.element.querySelector('.window-titlebar');
         if (titlebar) {
             let resizeIndicator = titlebar.querySelector('.resize-indicator');
@@ -518,13 +659,11 @@ class Window {
     }
     
     async finishResize() {
-        // Remove resize indicator
         const resizeIndicator = this.element.querySelector('.resize-indicator');
         if (resizeIndicator) {
             resizeIndicator.style.display = 'none';
         }
         
-        // Send resize to display API if this is an executable
         if (this.displayId && this.app.type === 'executable') {
             const contentDiv = this.element.querySelector('.window-content');
             const rect = contentDiv.getBoundingClientRect();
@@ -540,9 +679,7 @@ class Window {
             }
         }
         
-        // Show content after resize is complete
         this.showContent();
-        
         await saveWindowState(this);
     }
 
@@ -566,15 +703,11 @@ class Window {
     }
 }
 
-// Server-side window state management
 async function saveWindowState(window) {
-    if (!sessionId) return;
-    
     try {
         await fetch(`${APPS_API_BASE}/session/window`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify(window.toJSON())
         });
         console.log('Window state saved:', window.id);
@@ -584,12 +717,10 @@ async function saveWindowState(window) {
 }
 
 async function deleteWindowState(windowId) {
-    if (!sessionId) return;
-    
     try {
         await fetch(`${APPS_API_BASE}/session/window/${windowId}`, {
             method: 'DELETE',
-            credentials: 'include'
+            headers: getAuthHeaders()
         });
         console.log('Window state deleted:', windowId);
     } catch (error) {
@@ -600,11 +731,10 @@ async function deleteWindowState(windowId) {
 async function getSession() {
     try {
         const response = await fetch(`${APPS_API_BASE}/session`, {
-            credentials: 'include'
+            headers: getAuthHeaders()
         });
         const data = await response.json();
-        sessionId = data.session_id;
-        console.log('Session loaded:', sessionId, 'Windows:', data.windows.length);
+        console.log('Windows:', data.windows.length);
         return data.windows;
     } catch (error) {
         console.error('Failed to get session:', error);
@@ -653,7 +783,27 @@ async function restoreWindowsState() {
     updateWindowManager();
 }
 
-// Global mouse/touch handlers with proper offset tracking
+// Constrain window position to viewport
+function constrainToViewport(x, y, width, height) {
+    const topbarHeight = isMobile ? 44 : 32;
+    const minVisibleHeight = 34; // titlebar height
+    
+    // Ensure top of window (titlebar) is always visible
+    const maxY = window.innerHeight - minVisibleHeight;
+    const minY = topbarHeight;
+    
+    // Keep some of the window visible horizontally
+    const minVisibleWidth = 100;
+    const maxX = window.innerWidth - minVisibleWidth;
+    const minX = -width + minVisibleWidth;
+    
+    return {
+        x: Math.max(minX, Math.min(x, maxX)),
+        y: Math.max(minY, Math.min(y, maxY))
+    };
+}
+
+// Global mouse/touch handlers with viewport constraints
 document.addEventListener('mousemove', (e) => {
     if (isDragging && window.draggingWindow) {
         e.preventDefault();
@@ -661,9 +811,13 @@ document.addEventListener('mousemove', (e) => {
         const win = window.draggingWindow;
         if (win.isMaximized) return;
         
-        // Use the stored offset to maintain relative position
-        const newX = e.clientX - dragOffset.x;
-        const newY = e.clientY - dragOffset.y;
+        let newX = e.clientX - dragOffset.x;
+        let newY = e.clientY - dragOffset.y;
+        
+        // Constrain to viewport
+        const constrained = constrainToViewport(newX, newY, win.bounds.width, win.bounds.height);
+        newX = constrained.x;
+        newY = constrained.y;
         
         win.bounds.x = newX;
         win.bounds.y = newY;
@@ -682,8 +836,13 @@ document.addEventListener('touchmove', (e) => {
         const touch = e.touches[0];
         const win = window.draggingWindow;
         
-        const newX = touch.clientX - dragOffset.x;
-        const newY = touch.clientY - dragOffset.y;
+        let newX = touch.clientX - dragOffset.x;
+        let newY = touch.clientY - dragOffset.y;
+        
+        // Constrain to viewport
+        const constrained = constrainToViewport(newX, newY, win.bounds.width, win.bounds.height);
+        newX = constrained.x;
+        newY = constrained.y;
         
         win.bounds.x = newX;
         win.bounds.y = newY;
@@ -738,10 +897,11 @@ document.addEventListener('touchend', () => {
 // Application Management
 async function loadApplications() {
     try {
-        const response = await fetch(`${APPS_API_BASE}/applications`);
+        const response = await fetch(`${APPS_API_BASE}/applications`, {
+            headers: getAuthHeaders()
+        });
         const newApps = await response.json();
         
-        // Check if applications have changed
         const appsChanged = JSON.stringify(applications) !== JSON.stringify(newApps);
         
         if (appsChanged) {
@@ -764,7 +924,6 @@ function renderApplications() {
     dock.innerHTML = '';
 
     applications.forEach(app => {
-        // App launcher item
         const appItem = document.createElement('div');
         appItem.className = 'app-item';
         appItem.innerHTML = `
@@ -774,8 +933,7 @@ function renderApplications() {
         appItem.addEventListener('click', () => launchApp(app));
         launcher.appendChild(appItem);
 
-        // Dock item (only for pinned/common apps)
-        if (['firefox', 'terminal', 'thunar', 'code', 'burp', 'hacktricks'].includes(app.id)) {
+        if (app.docked) {
             const dockItem = document.createElement('div');
             dockItem.className = 'dock-item';
             dockItem.innerHTML = `
@@ -1011,4 +1169,12 @@ window.addEventListener('resize', () => {
     }
 });
 
-init();
+// Start application
+(async function() {
+    const isAuthenticated = await checkAuth();
+    if (!isAuthenticated) {
+        showLoginModal();
+    } else {
+        await init();
+    }
+})()

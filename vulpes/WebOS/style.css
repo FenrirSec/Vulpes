@@ -76,7 +76,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: url('/wallpaper.jpg') no-repeat center center;
+    background: url('wallpaper.jpg') no-repeat center center;
     background-size: cover;
     opacity: 0.4;
     z-index: 0;
@@ -329,6 +329,7 @@ body {
     overflow: hidden;
     background: #000;
     border-radius: 0 0 var(--radius) var(--radius);
+    height: 100%;
 }
 
 .window.maximized .window-content {

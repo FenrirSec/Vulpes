@@ -1,19 +1,12 @@
 [
   {
-    "id": "code",
-    "name": "VS Code",
-    "icon": "terminal",
-    "type": "executable",
-    "executable": "code",
-    "category": "development"
-  },
-  {
     "id": "terminal",
     "name": "Terminal",
     "icon": "terminal",
     "type": "tui",
     "command": null,
-    "category": "system"
+    "category": "system",
+    "docked": true
   },
   {
     "id": "hacktricks",
@@ -29,8 +22,19 @@
     "name": "caido",
     "icon": "caido",
     "type": "url",
-      "url": "http://127.0.0.1:8083",
+      "url": "../8083/",
       "category": "tools",
-      "proxy": false
+      "proxy": false,
+      "docked": true
+
+  },
+    {
+	"id": "payloadsallthethings",
+	"name": "PayloadsAllTheThings",
+	"icon": "browser",
+	"type": "url",
+	"url": "https://swisskyrepo.github.io/PayloadsAllTheThings/",
+	"category": "internet",
+	"proxy": true
   }
 ]
