@@ -10,14 +10,8 @@ services:
       PORT: 6080
       PASSWORD: vulpes123
     ports:
-      - 8000:8000
-      - 8080:8080
-      - 8081:8081
-      - 8082:8082
-      - 8083:8083
-      - "4433:4433/tcp"
-      - "4433:4433/udp"
-      - "10000-10100:10000-10100"
+      - 8001:80
+      - 2222:22
     volumes:
       - ./Shared:/shared
       - ./vulpkg:/var/lib/vulpkg/repo
@@ -26,3 +20,15 @@ services:
     cap_add:
       - NET_ADMIN
     privileged: true
+
+#  nginx:
+#    image: nginx:latest
+#    container_name: nginx
+#    restart: unless-stopped
+#    ports:
+#      - "8000:80"
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#      #- ./vulpes/settings.json:/etc/nginx/html/display/settings.json
+#      #- ./vulpes/settings.json:/etc/nginx/html/settings.json
+#      - ./vulpes/WebOS/:/opt/WebOS/:ro

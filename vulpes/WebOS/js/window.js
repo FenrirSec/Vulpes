@@ -1,185 +1,3 @@
-const API_BASE = window.location.toString().replace('/8000', '/8080')
-const APPS_API_BASE = window.location.toString().replace('/8000', '/8082')
-//const APPS_API_BASE = window.location.toString().replace('/8000', '/8082') 
-
-// Authentication
-let authCredentials = null;
-
-// Request keyboard lock on mobile
-if (navigator.keyboard && navigator.keyboard.lock) {
-    navigator.keyboard.lock(['Escape', 'KeyW', 'KeyT']);
-}
-
-// State
-let windows = [];
-let nextZIndex = 100;
-let activeWindow = null;
-let isDragging = false;
-let dragOffset = { x: 0, y: 0 };
-let resizeState = null;
-let isMobile = window.innerWidth <= 768;
-let applications = [];
-let appLoadInterval = null;
-
-// Get auth headers
-function getAuthHeaders() {
-    if (!authCredentials) return {};
-    const credentials = btoa(`${authCredentials.username}:${authCredentials.password}`);
-    return { 'Authorization': `Basic ${credentials}` };
-}
-
-// Check if authenticated
-async function checkAuth() {
-    const stored = localStorage.getItem('authCredentials');
-    if (stored) {
-        try {
-            authCredentials = JSON.parse(stored);
-            // Verify credentials still work
-            const response = await fetch(`${APPS_API_BASE}/session`, {
-                headers: getAuthHeaders()
-            });
-            if (response.ok) {
-                return true;
-            }
-        } catch (e) {
-            console.error('Auth check failed:', e);
-        }
-    }
-    return false;
-}
-
-// Show login modal
-function showLoginModal() {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(13, 17, 23, 0.95);
-        backdrop-filter: blur(20px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-    `;
-    
-    modal.innerHTML = `
-        <div style="
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 32px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 20px 60px -15px var(--shadow);
-        ">
-            <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: var(--text-primary);">
-                Vulpes Desktop Login
-            </h2>
-            <form id="loginForm">
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-secondary);">
-                        Username
-                    </label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        required
-                        style="
-                            width: 100%;
-                            padding: 12px;
-                            background: var(--bg-tertiary);
-                            border: 1px solid var(--border);
-                            border-radius: var(--radius-sm);
-                            color: var(--text-primary);
-                            font-size: 14px;
-                        "
-                    />
-                </div>
-                <div style="margin-bottom: 24px;">
-                    <label style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-secondary);">
-                        Password
-                    </label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        required
-                        style="
-                            width: 100%;
-                            padding: 12px;
-                            background: var(--bg-tertiary);
-                            border: 1px solid var(--border);
-                            border-radius: var(--radius-sm);
-                            color: var(--text-primary);
-                            font-size: 14px;
-                        "
-                    />
-                </div>
-                <div id="loginError" style="
-                    display: none;
-                    margin-bottom: 16px;
-                    padding: 12px;
-                    background: var(--accent-error);
-                    border-radius: var(--radius-sm);
-                    color: white;
-                    font-size: 12px;
-                "></div>
-                <button 
-                    type="submit"
-                    style="
-                        width: 100%;
-                        padding: 12px;
-                        background: var(--accent);
-                        border: none;
-                        border-radius: var(--radius-sm);
-                        color: white;
-                        font-size: 14px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: all 0.15s ease;
-                    "
-                >
-                    Login
-                </button>
-            </form>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const form = document.getElementById('loginForm');
-    const errorDiv = document.getElementById('loginError');
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        
-        authCredentials = { username, password };
-        
-        try {
-            const response = await fetch(`${APPS_API_BASE}/session`, {
-                headers: getAuthHeaders()
-            });
-            
-            if (response.ok) {
-                localStorage.setItem('authCredentials', JSON.stringify(authCredentials));
-                modal.remove();
-                await init();
-            } else {
-                errorDiv.textContent = 'Invalid username or password';
-                errorDiv.style.display = 'block';
-                authCredentials = null;
-            }
-        } catch (error) {
-            errorDiv.textContent = 'Connection error. Please try again.';
-            errorDiv.style.display = 'block';
-            authCredentials = null;
-        }
-    });
-    
-    document.getElementById('username').focus();
-}
 
 // Window class
 class Window {
@@ -255,6 +73,7 @@ class Window {
             this.reconnectContent();
         }
     }
+
 
     setupEventListeners() {
         const titlebar = this.element.querySelector('.window-titlebar');
@@ -378,7 +197,7 @@ class Window {
         const displayRes = await fetch(`${API_BASE}/display`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ width: 1440, height: 3445 })
+            body: JSON.stringify({ width: 10000, height: 10000 })
         });
 
         if (!displayRes.ok) throw new Error(`Failed to create display: HTTP ${displayRes.status}`);
@@ -396,11 +215,13 @@ class Window {
         const contentRect = contentDiv.getBoundingClientRect();
 
         const displayId = this.displayId;
-	        setTimeout(async function() {
-                await fetch(`${API_BASE}/resize/${displayId}/${Math.floor(contentRect.width)}/${Math.floor(contentRect.height)}`, {
-		            method: 'POST'
-                    });
-	        }, 1000);
+
+        // We update the size directly after the original display is done 
+	    setTimeout(async function() {
+            await fetch(`${API_BASE}/resize/${displayId}/${Math.floor(contentRect.width)}/${Math.floor(contentRect.height)}`, {
+		        method: 'POST'
+                });
+	    }, 1000);
 
         const iframe = document.createElement('iframe');
         iframe.src = `${API_BASE}/display/${this.displayId}`;
@@ -409,6 +230,7 @@ class Window {
         contentDiv.appendChild(iframe);
         
         this.waitForCanvasReady(iframe, contentDiv);
+        console.log('Executable loaded')
         this.monitorCanvas(iframe);
     }
 
@@ -450,21 +272,35 @@ class Window {
         this.terminalPort = data.port;
 
         const iframe = document.createElement('iframe');
-        iframe.src = window.location.toString().replace('/8000', `/${data.port.toString()}/term`)
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
+        iframe.src = window.location.toString() + `/term/${data.port.toString()}/`
+
         contentDiv.appendChild(iframe);
+        this.waitForCanvasReady(iframe, contentDiv);
     }
 
     waitForCanvasReady(iframe, contentDiv) {
+        console.log('waitForCanvasReady')
+
         const loading = contentDiv.querySelector('.window-loading');
         if (!loading) return;
 
         const checkCanvas = () => {
+            console.log('checkCanvas')
             try {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                console.log('document', iframeDoc)
                 if (!iframeDoc) return false;
 
+                // Temporary fix for the resize issue
+                const scrollHeight = iframe.contentDocument.body.scrollHeight
+                console.log('scrollHeight is', scrollHeight)
+                if (scrollHeight == 150) {
+                    setTimeout(() => {
+                    iframe.style.height = '100%'
+                    iframe.style.width = '100%'
+                    }, 500)
+                }
+                //
                 const canvas = iframeDoc.querySelector('canvas#windowImage');
                 return canvas && canvas.width > 100 && canvas.height > 100;
             } catch (e) {
@@ -477,6 +313,7 @@ class Window {
                 clearInterval(pollInterval);
                 if (loading && loading.parentNode) {
                     loading.remove();
+                    console.log('Canvas Loaded!')
                 }
             }
         }, 50);
@@ -703,6 +540,8 @@ class Window {
     }
 }
 
+
+
 async function saveWindowState(window) {
     try {
         await fetch(`${APPS_API_BASE}/session/window`, {
@@ -802,379 +641,3 @@ function constrainToViewport(x, y, width, height) {
         y: Math.max(minY, Math.min(y, maxY))
     };
 }
-
-// Global mouse/touch handlers with viewport constraints
-document.addEventListener('mousemove', (e) => {
-    if (isDragging && window.draggingWindow) {
-        e.preventDefault();
-        
-        const win = window.draggingWindow;
-        if (win.isMaximized) return;
-        
-        let newX = e.clientX - dragOffset.x;
-        let newY = e.clientY - dragOffset.y;
-        
-        // Constrain to viewport
-        const constrained = constrainToViewport(newX, newY, win.bounds.width, win.bounds.height);
-        newX = constrained.x;
-        newY = constrained.y;
-        
-        win.bounds.x = newX;
-        win.bounds.y = newY;
-        win.element.style.left = `${newX}px`;
-        win.element.style.top = `${newY}px`;
-    } else if (resizeState) {
-        e.preventDefault();
-        const dx = e.clientX - resizeState.startX;
-        const dy = e.clientY - resizeState.startY;
-        resizeState.window.resize(dx, dy);
-    }
-});
-
-document.addEventListener('touchmove', (e) => {
-    if (isDragging && window.draggingWindow) {
-        const touch = e.touches[0];
-        const win = window.draggingWindow;
-        
-        let newX = touch.clientX - dragOffset.x;
-        let newY = touch.clientY - dragOffset.y;
-        
-        // Constrain to viewport
-        const constrained = constrainToViewport(newX, newY, win.bounds.width, win.bounds.height);
-        newX = constrained.x;
-        newY = constrained.y;
-        
-        win.bounds.x = newX;
-        win.bounds.y = newY;
-        win.element.style.left = `${newX}px`;
-        win.element.style.top = `${newY}px`;
-    }
-});
-
-document.addEventListener('mouseup', () => {
-    if (isDragging) {
-        isDragging = false;
-        window.draggingWindow = null;
-        document.body.style.cursor = '';
-        
-        windows.forEach(w => {
-            if (w.element) w.element.style.transition = '';
-        });
-        
-        if (activeWindow) {
-            saveWindowState(activeWindow);
-        }
-    }
-    if (resizeState) {
-        const win = resizeState.window;
-        resizeState = null;
-        document.body.style.cursor = '';
-        
-        if (win) {
-            win.finishResize();
-        }
-    }
-});
-
-document.addEventListener('touchend', () => {
-    if (isDragging) {
-        isDragging = false;
-        window.draggingWindow = null;
-        if (activeWindow) {
-            saveWindowState(activeWindow);
-        }
-    }
-    if (resizeState) {
-        const win = resizeState.window;
-        resizeState = null;
-        
-        if (win) {
-            win.finishResize();
-        }
-    }
-});
-
-// Application Management
-async function loadApplications() {
-    try {
-        const response = await fetch(`${APPS_API_BASE}/applications`, {
-            headers: getAuthHeaders()
-        });
-        const newApps = await response.json();
-        
-        const appsChanged = JSON.stringify(applications) !== JSON.stringify(newApps);
-        
-        if (appsChanged) {
-            applications = newApps;
-            renderApplications();
-            if (applications.length > 0 && appLoadInterval) {
-                showNotification('Applications updated', 'success');
-            }
-        }
-    } catch (error) {
-        console.error('Failed to load applications:', error);
-    }
-}
-
-function renderApplications() {
-    const launcher = document.getElementById('appLauncher');
-    const dock = document.getElementById('dock');
-    
-    launcher.innerHTML = '';
-    dock.innerHTML = '';
-
-    applications.forEach(app => {
-        const appItem = document.createElement('div');
-        appItem.className = 'app-item';
-        appItem.innerHTML = `
-            <div class="app-item-icon"><img class="app-icon" src="${app.icon}"/></div>
-            <div class="app-item-name">${app.name}</div>
-        `;
-        appItem.addEventListener('click', () => launchApp(app));
-        launcher.appendChild(appItem);
-
-        if (app.docked) {
-            const dockItem = document.createElement('div');
-            dockItem.className = 'dock-item';
-            dockItem.innerHTML = `
-                <div class="dock-item-icon"><img class="app-icon" src="${app.icon}"/></div>
-                <div class="dock-item-label">${app.name}</div>
-            `;
-            dockItem.addEventListener('click', () => launchApp(app));
-            dock.appendChild(dockItem);
-        }
-    });
-}
-
-function launchApp(app) {
-    const win = new Window(app);
-    windows.push(win);
-    win.focus();
-    
-    document.getElementById('appLauncher').classList.remove('open');
-    showNotification(`Launching ${app.name}...`, 'success');
-    updateWindowManager();
-}
-
-// Window Manager UI
-function updateWindowManager() {
-    const content = document.getElementById('windowManagerContent');
-    
-    if (!content) {
-        const panel = document.getElementById('windowManagerPanel');
-        if (panel) {
-            const existingContent = panel.querySelector('.window-manager-content');
-            if (!existingContent) {
-                const newContent = document.createElement('div');
-                newContent.id = 'windowManagerContent';
-                newContent.className = 'window-manager-content';
-                panel.appendChild(newContent);
-            }
-        }
-        return updateWindowManager();
-    }
-    
-    if (windows.length === 0) {
-        content.innerHTML = '<div class="window-manager-empty">No windows open</div>';
-        return;
-    }
-    
-    content.innerHTML = '';
-    
-    windows.forEach(win => {
-        const item = document.createElement('div');
-        item.className = 'window-manager-item';
-        if (win === activeWindow) {
-            item.classList.add('active');
-        }
-        
-        const isMinimized = win.element.style.display === 'none';
-        const typeLabel = win.app.type === 'executable' ? 'App' : 
-                         win.app.type === 'url' ? 'Web' : 'Terminal';
-        
-        item.innerHTML = `
-            <div class="window-manager-item-icon"><img src="${win.app.icon}" alt="${win.app.name}"/></div>
-            <div class="window-manager-item-info">
-                <div class="window-manager-item-title">${win.app.name}</div>
-                <div class="window-manager-item-meta">${typeLabel}${isMinimized ? ' • Minimized' : ''}</div>
-            </div>
-            <button class="window-manager-item-close" data-window-id="${win.id}" title="Close">×</button>
-        `;
-        
-        item.addEventListener('click', (e) => {
-            if (e.target.classList.contains('window-manager-item-close')) return;
-            
-            if (isMinimized) {
-                win.element.style.display = 'block';
-            }
-            win.focus();
-            document.getElementById('windowManagerPanel').classList.remove('open');
-        });
-        
-        const closeBtn = item.querySelector('.window-manager-item-close');
-        closeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            win.close();
-        });
-        
-        content.appendChild(item);
-    });
-}
-
-// UI Functions
-function showNotification(message, type = 'success') {
-    const bar = document.getElementById('notificationsBar');
-    bar.textContent = message;
-    bar.className = `notifications-bar show ${type}`;
-    
-    setTimeout(() => {
-        bar.classList.remove('show');
-    }, 3000);
-}
-
-function updateClock() {
-    const now = new Date();
-    const time = now.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-    });
-    document.getElementById('clock').textContent = time;
-}
-
-// Event Listeners
-document.getElementById('appsBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('appLauncher').classList.toggle('open');
-    document.getElementById('windowManagerPanel').classList.remove('open');
-});
-
-document.getElementById('appsBtn').addEventListener('touchend', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('appLauncher').classList.toggle('open');
-    document.getElementById('windowManagerPanel').classList.remove('open');
-});
-
-document.getElementById('windowsBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('windowManagerPanel').classList.toggle('open');
-    document.getElementById('appLauncher').classList.remove('open');
-});
-
-document.getElementById('windowsBtn').addEventListener('touchend', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('windowManagerPanel').classList.toggle('open');
-    document.getElementById('appLauncher').classList.remove('open');
-});
-
-document.getElementById('settingsBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('settingsPanel').classList.add('open');
-});
-
-document.getElementById('settingsBtn').addEventListener('touchend', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('settingsPanel').classList.add('open');
-});
-
-document.getElementById('settingsClose').addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('settingsPanel').classList.remove('open');
-});
-
-document.getElementById('settingsClose').addEventListener('touchend', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('settingsPanel').classList.remove('open');
-});
-
-document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const theme = btn.dataset.theme;
-        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        if (theme === 'light') {
-            document.body.classList.add('light-theme');
-        } else {
-            document.body.classList.remove('light-theme');
-        }
-        
-        localStorage.setItem('theme', theme);
-    });
-});
-
-// Close panels when clicking outside
-document.addEventListener('click', (e) => {
-    const launcher = document.getElementById('appLauncher');
-    const appsBtn = document.getElementById('appsBtn');
-    const windowManager = document.getElementById('windowManagerPanel');
-    const windowsBtn = document.getElementById('windowsBtn');
-    
-    if (!launcher.contains(e.target) && !appsBtn.contains(e.target)) {
-        launcher.classList.remove('open');
-    }
-    
-    if (!windowManager.contains(e.target) && !windowsBtn.contains(e.target)) {
-        windowManager.classList.remove('open');
-    }
-});
-
-// Initialize
-async function init() {
-    updateClock();
-    setInterval(updateClock, 1000);
-    
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-theme');
-        document.getElementById('light-button').classList.add('active');
-        document.getElementById('dark-button').classList.remove('active');
-    }
-    
-    // Initial app load
-    await loadApplications();
-    
-    // Restore windows after applications are loaded
-    await restoreWindowsState();
-    
-    // Poll for application changes every 10 seconds
-    appLoadInterval = setInterval(loadApplications, 10000);
-    
-    showNotification('Vulpes Desktop ready', 'success');
-}
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (appLoadInterval) {
-        clearInterval(appLoadInterval);
-    }
-});
-
-// Handle window resize
-window.addEventListener('resize', () => {
-    const wasMobile = isMobile;
-    isMobile = window.innerWidth <= 768;
-    
-    if (wasMobile !== isMobile) {
-        location.reload();
-    }
-});
-
-// Start application
-(async function() {
-    const isAuthenticated = await checkAuth();
-    if (!isAuthenticated) {
-        showLoginModal();
-    } else {
-        await init();
-    }
-})()

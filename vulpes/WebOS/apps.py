@@ -430,14 +430,14 @@ async def start_terminal(req: TermRequest = None, username: str = Depends(verify
         if command and command != "null":
             process = subprocess.Popen(
                 ["./xterm_rs", "--host", HOST, "--port", str(port), "--cmd", command],
-            )
+            shell=False)
         else:
             process = subprocess.Popen(
-                ["./xterm_rs", "--host", HOST, "--port", str(port)],
-            )
+                ["./xterm_rs", "--host", HOST, "--port", str(port), "--cmd", "tmux"],
+            shell=False)
         
         running_terminals[port] = process
-        return {"port": port, "url": f"http://localhost:{port}/term"}
+        return {"port": port, "url": f"http://localhost:{port}/term/"}
     
     except FileNotFoundError:
         raise HTTPException(
