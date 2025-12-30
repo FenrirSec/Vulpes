@@ -131,4 +131,14 @@ fi
 
 cd;
 
+# if running inside xterm_rs in non-interactive we make the shell fully interactive with python
+# This is a patch, not supposed to be a long-term fix. But we'll see...
+
+if [[ -z "${INTERACTIVE}" ]];then
+    export INTERACTIVE=1
+    clear
+    python3 -c 'import pty; pty.spawn("/bin/bash")'
+    resize
+fi
+
 PS1='\[\e[0;2;38;5;226m\]\$ \[\e[0;1;38;5;154m\]\u \[\e[0;2;38;5;157m\]in \[\e[0;1;38;5;208m\]\W \[\e[0;38;5;43m\]> \[\e[0m\]'

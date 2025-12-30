@@ -34,13 +34,7 @@ RUN chown -R "vulpes:vulpes" "/home/vulpes"
 # WebOS Setup
 RUN apk add --no-cache musl-dev openssl-dev openssl py3-virtualenv git
 
-COPY WebOS /opt/webos
-
-COPY xterm_rs /opt/webos/xterm_rs
-
-RUN chown -R vulpes:vulpes /opt/webos
-
-RUN ln -s /opt/webos/env/bin/vulpkg /usr/bin/vulpkg
+RUN ln -s /home/vulpes/.env/bin/vulpkg /usr/bin/vulpkg
 
 #RUN chmod -R 777 /var/lib/vulpkg/ && chmod -R 777 /opt/vulpkg/
 
@@ -50,16 +44,20 @@ RUN ssh-keygen -A
 # NGINX setup
 COPY nginx.conf /etc/nginx/nginx.conf
 
+# I would like to do this as vulpes but it is not possible with docker as of today, COPY is made as root
+COPY WebOS /opt/webos
+
+COPY xterm_rs /opt/webos/xterm_rs
+
+RUN chown -R vulpes:vulpes /opt/webos
+
 USER vulpes
 
 # Setting up bash as default shell in tmux
 RUN echo -e 'set -g default-terminal "screen-256color"\nset-option -g default-shell /bin/bash' >> ~/.tmux.conf
 
-# Setting up WebOS Python env
-RUN cd /opt/webos && rm -fr env && virtualenv env && source env/bin/activate && pip install websockets Pillow python-xlib git+https://github.com/lp1dev/WebX11.git@webos git+https://github.com/FenrirSec/vulpkg.git fastapi uvicorn httpx 
-
-# Setting up global Python env
-RUN cd $HOME && virtualenv .env
+# Setting up global user Python env
+RUN virtualenv $HOME/.env && source $HOME/.env/bin/activate && pip install websockets Pillow python-xlib git+https://github.com/lp1dev/WebX11.git@webos git+https://github.com/FenrirSec/vulpkg.git fastapi uvicorn httpx 
 
 # Adding .profile file
 COPY profile ~/.profile

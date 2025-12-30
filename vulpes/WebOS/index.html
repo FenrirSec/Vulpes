@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Vulpes Desktop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -84,9 +87,14 @@
                             <button id="dark-button" class="theme-btn active" data-theme="dark">Dark</button>
                             <button id="light-button" class="theme-btn" data-theme="light">Light</button>
                         </div>
+		    </div>
+		    <div class="settings-item">
+		      <div class="settings-item-label">Main Color</div>
+			<input type="color" value="color" id="input-color" name="color" placeholder="#4A469E" onchange=/>
                     </div>
                 </div>
-                
+
+		<!--
                 <div class="settings-section">
                     <div class="settings-section-title">Credits</div>
                     <div class="settings-item" style="display: block; padding: 12px;">
@@ -95,6 +103,7 @@
                         </div>
                     </div>
                 </div>
+		-->
             </div>
         </div>
     </div>

@@ -12,6 +12,7 @@ services:
     ports:
       - 8001:80
       - 2222:22
+      - 8083:8083 # Caido
     volumes:
       - ./Shared:/shared
       - ./vulpkg:/var/lib/vulpkg/repo

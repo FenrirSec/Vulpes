@@ -31,93 +31,33 @@ async function checkAuth() {
 // Show login modal
 function showLoginModal() {
     const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(13, 17, 23, 0.95);
-        backdrop-filter: blur(20px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-    `;
-    
+    modal.id = 'modal-backdrop'
     modal.innerHTML = `
-        <div style="
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 32px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 20px 60px -15px var(--shadow);
-        ">
-            <h2 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: var(--text-primary);">
-                Vulpes Desktop Login
+        <div id="modal">
+            <h2 class="modalTitle">
+                Vulpes Login
             </h2>
+<p class="modalText">Login onto your Vulpes instance with your provided credentials.</p>
             <form id="loginForm">
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-secondary);">
-                        Username
-                    </label>
+                <div class="loginInput">
                     <input 
                         type="text" 
-                        id="username" 
+                        id="username"
+			placeholder="Username"
                         required
-                        style="
-                            width: 100%;
-                            padding: 12px;
-                            background: var(--bg-tertiary);
-                            border: 1px solid var(--border);
-                            border-radius: var(--radius-sm);
-                            color: var(--text-primary);
-                            font-size: 14px;
-                        "
                     />
                 </div>
-                <div style="margin-bottom: 24px;">
-                    <label style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-secondary);">
-                        Password
-                    </label>
+
+                <div class="loginInput">
                     <input 
                         type="password" 
-                        id="password" 
+                        id="password"
+			placeholder="Password"
                         required
-                        style="
-                            width: 100%;
-                            padding: 12px;
-                            background: var(--bg-tertiary);
-                            border: 1px solid var(--border);
-                            border-radius: var(--radius-sm);
-                            color: var(--text-primary);
-                            font-size: 14px;
-                        "
                     />
                 </div>
-                <div id="loginError" style="
-                    display: none;
-                    margin-bottom: 16px;
-                    padding: 12px;
-                    background: var(--accent-error);
-                    border-radius: var(--radius-sm);
-                    color: white;
-                    font-size: 12px;
-                "></div>
-                <button 
-                    type="submit"
-                    style="
-                        width: 100%;
-                        padding: 12px;
-                        background: var(--accent);
-                        border: none;
-                        border-radius: var(--radius-sm);
-                        color: white;
-                        font-size: 14px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: all 0.15s ease;
-                    "
-                >
+                <div id="loginError" style="display: none;"></div>
+                <button class="loginButton" type="submit">
                     Login
                 </button>
             </form>

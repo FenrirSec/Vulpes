@@ -23,16 +23,16 @@ class Window {
     }
 
     create() {
-        const win = document.createElement('div');
-        win.className = 'window';
-        win.id = this.id;
-        win.style.left = `${this.bounds.x}px`;
-        win.style.top = `${this.bounds.y}px`;
-        win.style.width = `${this.bounds.width}px`;
-        win.style.height = `${this.bounds.height}px`;
-        win.style.zIndex = this.zIndex;
+        this.el = document.createElement('div');
+        this.el.className = 'window ' + this.app.type;
+        this.el.id = this.id;
+        this.el.style.left = `${this.bounds.x}px`;
+        this.el.style.top = `${this.bounds.y}px`;
+        this.el.style.width = `${this.bounds.width}px`;
+        this.el.style.height = `${this.bounds.height}px`;
+        this.el.style.zIndex = this.zIndex;
 
-        win.innerHTML = `
+        this.el.innerHTML = `
             <div class="window-titlebar" data-window-id="${this.id}">
                 <div class="window-title">
                     <span class="window-icon"><img class="app-icon" src="${this.app.icon}"/></span>
@@ -62,9 +62,10 @@ class Window {
             ` : ''}
         `;
 
-        document.getElementById('workspace').appendChild(win);
-        this.element = win;
 
+        document.getElementById('workspace').appendChild(this.el);
+
+	this.element = this.el
         this.setupEventListeners();
         
         if (!this.data.restored) {
@@ -90,9 +91,9 @@ class Window {
             isDragging = true;
             
             const rect = this.element.getBoundingClientRect();
+	    
             dragOffset.x = e.clientX - rect.left;
-
-            // dragOffset.y = e.clientY - rect.top;
+            dragOffset.y = e.clientY - rect.top;
             
             window.draggingWindow = this;
             
@@ -216,12 +217,6 @@ class Window {
 
         const displayId = this.displayId;
 
-        // We update the size directly after the original display is done 
-	    setTimeout(async function() {
-            await fetch(`${API_BASE}/resize/${displayId}/${Math.floor(contentRect.width)}/${Math.floor(contentRect.height)}`, {
-		        method: 'POST'
-                });
-	    }, 1000);
 
         const iframe = document.createElement('iframe');
         iframe.src = `${API_BASE}/display/${this.displayId}`;
@@ -232,6 +227,12 @@ class Window {
         this.waitForCanvasReady(iframe, contentDiv);
         console.log('Executable loaded')
         this.monitorCanvas(iframe);
+	// We update the size directly after the original display is done
+	setTimeout(async function() {
+            await fetch(`${API_BASE}/resize/${displayId}/${Math.floor(contentRect.width)}/${Math.floor(contentRect.height)}`, {
+		method: 'POST'
+            });
+	}, 1000);
     }
 
     async loadUrl(contentDiv) {
@@ -285,7 +286,6 @@ class Window {
         if (!loading) return;
 
         const checkCanvas = () => {
-            console.log('checkCanvas')
             try {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
                 console.log('document', iframeDoc)
@@ -293,6 +293,9 @@ class Window {
 
                 // Temporary fix for the resize issue
                 const scrollHeight = iframe.contentDocument.body.scrollHeight
+		iframe.contentDocument.body.addEventListener("resize", () => {
+		    console.log('RESIZE EVENT CALLED')
+		})
                 console.log('scrollHeight is', scrollHeight)
                 if (scrollHeight == 150) {
                     setTimeout(() => {
@@ -328,12 +331,11 @@ class Window {
 
     monitorCanvas(iframe) {
         const checkInterval = setInterval(() => {
-            console.log("Checking canvas")
             try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                if (!iframeDoc) return;
+		const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+		const canvas = iframeDoc.querySelector('canvas#windowImage');
 
-                const canvas = iframeDoc.querySelector('canvas#windowImage');
+                if (!iframeDoc) return;
                 if (!canvas) return;
 
                 const ctx = canvas.getContext('2d');
@@ -354,9 +356,9 @@ class Window {
                     this.close();
                 }
             } catch (e) {
-                // Ignore cross-origin errors
+		console.warning(e)
             }
-        }, 2000);
+        }, 1000);
 
         this.canvasMonitorInterval = checkInterval;
     }
@@ -373,7 +375,7 @@ class Window {
     toggleMaximize() {
         if (isMobile) return;
 
-        if (this.isMaximized) {
+        if (this.isMaximized && this.savedBounds) {
             this.element.classList.remove('maximized');
             this.element.style.left = `${this.savedBounds.x}px`;
             this.element.style.top = `${this.savedBounds.y}px`;

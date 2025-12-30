@@ -90,6 +90,10 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
     });
 });
 
+document.getElementById('input-color').addEventListener('change', (e) => {
+    document.body.style.setProperty('--primary', e.target.value);
+})
+
 // Close panels when clicking outside
 document.addEventListener('click', (e) => {
     const launcher = document.getElementById('appLauncher');

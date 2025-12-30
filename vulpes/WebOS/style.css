@@ -1,3 +1,9 @@
+html {
+    font-family: "Lato", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -12,45 +18,53 @@ iframe {
     border: none;
 }
 
-:root {
-    /* Nord-inspired dark theme with custom accents */
+body {
+    --primary: #4A469E;
+    --bg-backdrop: blur(100px) saturate(50%) contrast(50%) brightness(30%);
+    --bg-backdrop2: blur(100px) saturate(50%) contrast(50%) brightness(30%) opacity(100%);
+    --box-shadow: 7px 7px 16px -1px #000;
+    --box-shadow: rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.04) 0px 10px 10px -5px;
+    --primary-accent: rgba(255, 255, 255, 0.05);
     --bg-primary: #0d1117;
     --bg-secondary: #161b22;
     --bg-tertiary: #1f2937;
-    --accent: #88c0d0;
+    --accent: var(--primary);
     --accent-hover: #81a1c1;
     --accent-secondary: #a3be8c;
     --accent-warning: #ebcb8b;
     --accent-error: #bf616a;
     --text-primary: #eceff4;
-    --text-secondary: #6e7681;
+    --bg-window: rgba(0, 0, 0, 0.5);
+    --text-secondary: #e2e2e2;
     --border: rgba(136, 192, 208, 0.15);
     --shadow: rgba(0, 0, 0, 0.5);
     --backdrop: rgba(13, 17, 23, 0.85);
     --gap: 8px;
     --radius: 12px;
     --radius-sm: 8px;
+    --radius-vsm: 4px;
+    --topbar-height: 40px;
 }
 
 body.light-theme {
-    /* Clean macOS-inspired light theme */
+    --bg-backdrop: blur(100px) saturate(10%) brightness(290%);
+    --bg-backdrop2: blur(100px) saturate(10%) brightness(270%);
     --bg-primary: #fafafa;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #f5f5f5;
-    --accent: #007aff;
+    --bg-tertiary: #eee;
+    --accent: var(--primary);
     --accent-hover: #0056cc;
     --accent-secondary: #34c759;
     --accent-warning: #ff9500;
     --accent-error: #ff3b30;
     --text-primary: #1d1d1f;
-    --text-secondary: #86868b;
+    --text-secondary: #333333;
     --border: rgba(0, 0, 0, 0.08);
     --shadow: rgba(0, 0, 0, 0.08);
     --backdrop: rgba(255, 255, 255, 0.85);
 }
 
 body {
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
     background: var(--bg-primary);
     color: var(--text-primary);
     overflow: hidden;
@@ -62,13 +76,47 @@ body {
     position: fixed;
 }
 
+input {
+    width: 100%;
+    outline: 0;
+    -webkit-appearance: none;
+    height: 2.5rem;
+    margin: 1rem 0;
+    padding: 0 0.5rem;
+    background-color: var(--primary-accent);
+    border-radius: var(--radius-vsm);
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+}
+
+input[type="color"] {
+    padding: 0;
+}
+
+input:focus, input:active {
+    border: 1px solid var(--text-primary);
+    color: var(--text-primary);
+    outline: none;
+}
+
+button {
+    height: 2.5rem;
+    width: 100%;
+    background-color: var(--primary);
+    color: var(--text-primary);
+    border: none;
+    border-radius: var(--radius-vsm);
+}
+
+button:hover {
+    background-color: var(--bg-tertiary);
+}
+
 .desktop {
     position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg-primary);
+    background-color: var(--primary);
     overflow: hidden;
 }
 
@@ -76,8 +124,6 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: url('wallpaper.jpg') no-repeat center center;
-    background-size: cover;
     opacity: 0.4;
     z-index: 0;
 }
@@ -86,29 +132,19 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: 
-        radial-gradient(circle at 20% 50%, rgba(136, 192, 208, 0.03) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(163, 190, 140, 0.03) 0%, transparent 50%);
     z-index: 0;
     pointer-events: none;
 }
 
-/* Refined Top Bar - i3/sway inspired with macOS polish */
-.topbar {
-    height: 32px;
-    background: var(--backdrop);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 1px solid var(--border);
+.topbar {    
+    height: var(--topbar-height);
+    backdrop-filter: var(--bg-backdrop);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
-    z-index: 1000;
+    padding: 0 1rem;
+    z-index: 9;
     position: relative;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
 }
 
 .topbar-left, .topbar-right {
@@ -119,11 +155,9 @@ body {
 
 .topbar-logo {
     font-weight: 600;
-    font-size: 13px;
-    color: var(--accent);
-    text-transform: lowercase;
-    letter-spacing: 0.02em;
-    margin-right: 8px;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-right: 0.5rem;
 }
 
 .topbar-time {
@@ -138,11 +172,9 @@ body {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-primary);
-    padding: 6px 8px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-vsm);
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -153,7 +185,6 @@ body {
 .topbar-btn:hover {
     background: var(--bg-tertiary);
     border-color: var(--accent);
-    transform: translateY(-0.5px);
 }
 
 .topbar-btn:active {
@@ -161,7 +192,12 @@ body {
 }
 
 .app-icon {
-    width: 2em;
+    width: 1.5em;
+}
+
+.icon-windows {
+    font-size: 24px;
+    margin-top: -7px;
 }
 
 /* Icon styles */
@@ -181,8 +217,8 @@ body {
 
 .icon-gear {
     position: relative;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
 }
 
 .icon-gear::before,
@@ -208,34 +244,77 @@ body {
 }
 
 .workspace {
-    flex: 1;
+    //flex: 1;
+    height: 100%;
     position: relative;
     overflow: hidden;
     z-index: 1;
 }
 
-/* Enhanced Window - Clean and modern */
+#modal-backdrop{
+    backdrop-filter: blur(2px);
+    inset: 0px;
+    position: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+#modal {
+    border-radius: var(--radius);
+    backdrop-filter: var(--bg-backdrop);
+    color: var(--text-primary);
+    padding: 4rem;
+    box-shadow: var(--box-shadow);
+}
+
+#modal h2 {
+    margin-bottom: 2rem;
+}
+
+.modalText {
+    margin: 1em 0;
+    font-weight: 200;
+    color: white;
+    font-shadow: 1px 1px 1px  white;
+}
+
+#loginForm label {
+    display: block;
+}
+
+#loginForm input {
+    margin-bottom: 1rem;
+}
+
+#loginForm button {
+    margin-top: 2rem;
+}
+
+
 .window {
     position: absolute;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: 
-        0 20px 50px -12px var(--shadow),
-        0 0 0 1px var(--border);
+    box-shadow: var(--box-shadow);
+    backdrop-filter: var(--bg-backdrop2);
     display: flex;
     flex-direction: column;
     min-width: 400px;
     min-height: 300px;
-    z-index: 1;
-    transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
 }
 
 .window.active {
-    box-shadow: 
+    /*box-shadow: 
         0 25px 60px -15px rgba(0, 0, 0, 0.6),
         0 0 0 1px var(--accent),
-        0 0 20px -5px rgba(136, 192, 208, 0.2);
+        0 0 20px -5px rgba(136, 192, 208, 0.2);*/
+}
+
+.window.tui {
+    background-color: rgb(37, 35, 43);
+    backdrop-filter: none;
 }
 
 .window.maximized {
@@ -249,20 +328,20 @@ body {
 
 .window-titlebar {
     height: 34px;
-    background: var(--bg-tertiary);
+    backdrop-filter: var(--bg-backdrop);
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius) var(--radius) 0 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
+    padding: 1rem 0.5rem;
     cursor: move;
     user-select: none;
     transition: background 0.15s ease;
 }
 
 .window.active .window-titlebar {
-    background: var(--bg-secondary);
+    backdrop-filter: var(--bg-backdrop2);
 }
 
 .window.maximized .window-titlebar {
@@ -271,20 +350,15 @@ body {
 
 .window-title {
     font-size: 12px;
-    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
-    letter-spacing: 0.01em;
     color: var(--text-secondary);
 }
 
 .window.active .window-title {
     color: var(--text-primary);
-}
-
-.window-icon {
-    font-size: 14px;
+    font-weight: 600;
 }
 
 .window-controls {
@@ -297,10 +371,7 @@ body {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: none;
     cursor: pointer;
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
     opacity: 0.9;
 }
 
@@ -324,10 +395,8 @@ body {
 }
 
 .window-content {
-    flex: 1;
     position: relative;
     overflow: hidden;
-    background: #000;
     border-radius: 0 0 var(--radius) var(--radius);
     height: 100%;
 }
@@ -383,24 +452,17 @@ body {
     font-weight: 600;
 }
 
-/* Refined Dock - i3bar meets macOS */
 .dock {
     position: absolute;
     bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--backdrop);
-    backdrop-filter: blur(30px) saturate(180%);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
-    border: 1px solid var(--border);
+    backdrop-filter: var(--bg-backdrop);
     border-radius: 16px;
-    padding: 4px;
+    padding: 1rem;
     display: flex;
     gap: 2px;
-    z-index: 999;
-    box-shadow: 
-        0 10px 40px -10px var(--shadow),
-        0 0 0 1px rgba(255, 255, 255, 0.05);
+    z-index: 10;
 }
 
 .dock-item {
@@ -469,25 +531,20 @@ body {
     opacity: 1;
 }
 
-/* App Launcher - Spotlight-inspired with grid */
 .app-launcher {
     position: absolute;
-    bottom: 90px;
+    bottom: 100px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--backdrop);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: var(--bg-backdrop);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px;
     display: none;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
-    z-index: 998;
-    box-shadow: 
-        0 20px 60px -15px var(--shadow),
-        0 0 0 1px rgba(136, 192, 208, 0.1);
+    z-index: 8;
+    box-shadow: var(--box-shadow);
     max-height: 70vh;
     overflow-y: auto;
 }
@@ -525,7 +582,7 @@ body {
 .app-item:hover {
     background: rgba(136, 192, 208, 0.1);
     border-color: var(--border);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
 }
 
 .app-item:active {
@@ -541,7 +598,6 @@ body {
 .app-item-name {
     font-size: 11px;
     text-align: center;
-    font-weight: 500;
     color: var(--text-secondary);
     letter-spacing: 0.01em;
     overflow: hidden;
@@ -555,19 +611,16 @@ body {
     color: var(--text-primary);
 }
 
-/* Enhanced Notifications */
 .notifications-bar {
     position: fixed;
     top: -60px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--backdrop);
-    backdrop-filter: blur(30px) saturate(180%);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: var(--bg-backdrop);
     color: var(--text-primary);
     padding: 10px 18px;
     border-radius: var(--radius);
-    z-index: 2000;
+    z-index: 10;
     text-align: center;
     font-weight: 500;
     font-size: 12px;
@@ -576,7 +629,6 @@ body {
     box-shadow: 
         0 10px 30px -10px var(--shadow),
         0 0 0 1px rgba(255, 255, 255, 0.05);
-    letter-spacing: 0.01em;
 }
 
 .notifications-bar.show {
@@ -601,7 +653,6 @@ body {
     color: #2e3440;
 }
 
-/* Mobile App Switcher */
 .mobile-app-switcher {
     position: fixed;
     top: 0;
@@ -610,7 +661,7 @@ body {
     bottom: 0;
     background: rgba(13, 17, 23, 0.95);
     backdrop-filter: blur(40px);
-    z-index: 2000;
+    z-index: 8;
     padding: 60px 16px 16px;
     display: none;
     flex-direction: column;
@@ -705,18 +756,17 @@ body {
     transform: scale(1.1);
 }
 
-/* Refined Settings Panel */
 .settings-panel {
     position: fixed;
-    top: 0;
+    top: var(--topbar-height);
     right: -380px;
     width: 340px;
     height: 100%;
-    background: var(--backdrop);
-    backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: var(--bg-backdrop2);
+
     -webkit-backdrop-filter: blur(40px) saturate(180%);
     border-left: 1px solid var(--border);
-    z-index: 1001;
+    z-index: 9;
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
     box-shadow: -10px 0 40px -10px var(--shadow);
@@ -728,26 +778,23 @@ body {
 
 .settings-header {
     padding: 20px;
-    border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: sticky;
-    top: 0;
-    background: var(--backdrop);
-    backdrop-filter: blur(40px);
+    backdrop-filter: contrast(110%);
     z-index: 10;
 }
 
 .settings-title {
     font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
 }
 
 .settings-close {
     width: 32px;
     height: 32px;
+    width: 2rem;
+    height: 2rem;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border);
     background: var(--bg-tertiary);
@@ -788,8 +835,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px;
-    background: var(--bg-tertiary);
+    padding: 1rem;
+    backdrop-filter: contrast(90%);
     border-radius: var(--radius-sm);
     margin-bottom: 8px;
     border: 1px solid var(--border);
@@ -808,11 +855,9 @@ body {
 
 .theme-toggle {
     display: flex;
-    gap: 4px;
-    background: var(--bg-secondary);
+    gap: 0.5rem;
     padding: 3px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
+    border-radius: var(--radius-vsm);
 }
 
 .theme-btn {
@@ -820,7 +865,6 @@ body {
     border-radius: 6px;
     border: none;
     background: transparent;
-    color: var(--text-secondary);
     cursor: pointer;
     font-size: 11px;
     font-weight: 600;
@@ -835,10 +879,8 @@ body {
 .theme-btn.active {
     background: var(--accent);
     color: white;
-    box-shadow: 0 2px 8px rgba(136, 192, 208, 0.3);
 }
 
-/* Enhanced Loading Spinner */
 .spinner {
     border: 2px solid var(--bg-tertiary);
     border-top: 2px solid var(--accent);
@@ -885,7 +927,6 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
     background-clip: padding-box;
 }
 
-/* Right-edge scroll indicator */
 .right-edge-scroll {
     position: fixed;
     top: 0;
@@ -894,7 +935,7 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
     width: 3px;
     background: var(--accent);
     opacity: 0;
-    z-index: 999;
+    z-index: 9;
     transition: opacity 0.2s ease;
 }
 
@@ -914,7 +955,7 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
     border-radius: 12px;
     font-size: 11px;
     font-weight: 500;
-    z-index: 998;
+    z-index: 8;
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -933,7 +974,7 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
     left: 0;
     right: 0;
     height: 60px;
-    z-index: 9999;
+    z-index: 10;
     pointer-events: auto;
     display: none;
     touch-action: pan-y;
@@ -969,7 +1010,6 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
     }
 
     .topbar-btn {
-        padding: 6px 10px;
         font-size: 12px;
     }
 
@@ -1081,22 +1121,17 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
     }
 }
 
-/* Window Manager Panel - Add this to your style.css */
-
 .window-manager-panel {
     position: fixed;
-    top: 32px;
+    top: var(--topbar-height);
     left: -320px;
     width: 300px;
-    max-height: calc(100vh - 32px);
-    background: var(--backdrop);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
-    border-right: 1px solid var(--border);
-    z-index: 998;
+    max-height: calc(100vh - 40px);
+    backdrop-filter: var(--bg-backdrop2);
+    z-index: 8;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
-    box-shadow: 10px 0 40px -10px var(--shadow);
+    box-shadow: var(--box-shadow);
     display: flex;
     flex-direction: column;
 }
@@ -1107,12 +1142,10 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
 
 .window-manager-header {
     padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    background: var(--backdrop);
-    backdrop-filter: blur(40px);
-    z-index: 10;
+    backdrop-filter: contrast(105%);
+    z-index: 10;    
 }
 
 .window-manager-title {

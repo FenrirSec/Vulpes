@@ -16,10 +16,10 @@ import secrets
 
 HOST = "0.0.0.0"
 
-AUTH_USERNAME = "vulpes"
+AUTH_USERNAME = os.getenv("USERNAME") if os.getenv("USERNAME") else "vulpes"
 AUTH_PASSWORD = os.getenv("PASSWORD") if os.getenv("PASSWORD") else "vulpes"
 
-app = FastAPI(title="WebOS Applications API")
+app = FastAPI(title="Vulpes WebOS Apps API")
 security = HTTPBasic()
 
 # Enable CORS with credentials
@@ -433,7 +433,7 @@ async def start_terminal(req: TermRequest = None, username: str = Depends(verify
             shell=False)
         else:
             process = subprocess.Popen(
-                ["./xterm_rs", "--host", HOST, "--port", str(port), "--cmd", "tmux"],
+                ["./xterm_rs", "--host", HOST, "--port", str(port), "--cmd", "bash -c bash"],
             shell=False)
         
         running_terminals[port] = process
