@@ -226,6 +226,7 @@ class Window {
         
         this.waitForCanvasReady(iframe, contentDiv);
         console.log('Executable loaded')
+        this.hasLoaded = false;
         this.monitorCanvas(iframe);
 	// We update the size directly after the original display is done
 	setTimeout(async function() {
@@ -265,7 +266,7 @@ class Window {
         const command = this.app.command || null;
         const response = await fetch(`${APPS_API_BASE}/terminal/start`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            headers: { 'Content-Type': 'application/json', ...Vulpes.api.getAuthHeaders() },
             body: JSON.stringify({ command })
         });
         
@@ -338,7 +339,11 @@ class Window {
                 if (!iframeDoc) return;
                 if (!canvas) return;
 
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext('2d', { alpha: false,
+                    willReadFrequently: true,
+                    desynchronized: true 
+                });
+
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const pixels = imageData.data;
                 
@@ -350,10 +355,12 @@ class Window {
                     }
                 }
                 
-                if (allBlack) {
+                if (allBlack && this.hasLoaded) {
                     console.log('Canvas is empty, closing window:', this.app.name);
                     clearInterval(checkInterval);
                     this.close();
+                } else {
+                    this.hasLoaded = true;
                 }
             } catch (e) {
 		console.warning(e)
@@ -412,7 +419,7 @@ class Window {
         if (this.terminalPort) {
             await fetch(`${APPS_API_BASE}/terminal/${this.terminalPort}`, { 
                 method: 'DELETE',
-                headers: getAuthHeaders()
+                headers: Vulpes.api.getAuthHeaders()
             });
         }
         
@@ -548,7 +555,7 @@ async function saveWindowState(window) {
     try {
         await fetch(`${APPS_API_BASE}/session/window`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            headers: { 'Content-Type': 'application/json', ...Vulpes.api.getAuthHeaders() },
             body: JSON.stringify(window.toJSON())
         });
         console.log('Window state saved:', window.id);
@@ -561,7 +568,7 @@ async function deleteWindowState(windowId) {
     try {
         await fetch(`${APPS_API_BASE}/session/window/${windowId}`, {
             method: 'DELETE',
-            headers: getAuthHeaders()
+            headers: Vulpes.api.getAuthHeaders()
         });
         console.log('Window state deleted:', windowId);
     } catch (error) {
@@ -572,7 +579,7 @@ async function deleteWindowState(windowId) {
 async function getSession() {
     try {
         const response = await fetch(`${APPS_API_BASE}/session`, {
-            headers: getAuthHeaders()
+            headers: Vulpes.api.getAuthHeaders()
         });
         const data = await response.json();
         console.log('Windows:', data.windows.length);
@@ -594,7 +601,7 @@ async function restoreWindowsState() {
     }
     
     for (const winData of windowStates) {
-        const app = applications.find(a => a.id === winData.app_id);
+        const app = Vulpes.applications.find(a => a.id === winData.app_id);
         if (!app) {
             console.warn('App not found for window:', winData.app_id);
             continue;

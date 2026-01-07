@@ -17,17 +17,6 @@
       "category": "internet",
       "proxy": true
   },
-  {
-    "id": "caido",
-    "name": "caido",
-    "icon": "caido",
-    "type": "url",
-      "url": "../8083/",
-      "category": "tools",
-      "proxy": false,
-      "docked": true
-
-  },
     {
 	"id": "payloadsallthethings",
 	"name": "PayloadsAllTheThings",

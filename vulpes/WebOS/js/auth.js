@@ -1,12 +1,6 @@
 // Authentication
 let authCredentials = null;
- 
-// Get auth headers
-function getAuthHeaders() {
-    if (!authCredentials) return {};
-    const credentials = btoa(`${authCredentials.username}:${authCredentials.password}`);
-    return { 'Authorization': `Basic ${credentials}` };
-}
+
 
 // Check if authenticated
 async function checkAuth() {
@@ -15,9 +9,7 @@ async function checkAuth() {
         try {
             authCredentials = JSON.parse(stored);
             // Verify credentials still work
-            const response = await fetch(`${APPS_API_BASE}/session`, {
-                headers: getAuthHeaders()
-            });
+            const response = await Vulpes.api.getSession();
             if (response.ok) {
                 return true;
             }
@@ -70,6 +62,7 @@ function showLoginModal() {
     const errorDiv = document.getElementById('loginError');
     
     form.addEventListener('submit', async (e) => {
+        console.log('SUBMIT')
         e.preventDefault();
         
         const username = document.getElementById('username').value;
@@ -78,10 +71,9 @@ function showLoginModal() {
         authCredentials = { username, password };
         
         try {
-            const response = await fetch(`${APPS_API_BASE}/session`, {
-                headers: getAuthHeaders()
-            });
+            const response = await Vulpes.api.getSession() 
             
+            console.log('REPONSE', response)
             if (response.ok) {
                 localStorage.setItem('authCredentials', JSON.stringify(authCredentials));
                 modal.remove();
@@ -92,6 +84,7 @@ function showLoginModal() {
                 authCredentials = null;
             }
         } catch (error) {
+            console.log(error)
             errorDiv.textContent = 'Connection error. Please try again.';
             errorDiv.style.display = 'block';
             authCredentials = null;

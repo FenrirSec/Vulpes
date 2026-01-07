@@ -57,6 +57,9 @@ ICON_PATHS = [
     "/var/lib/vulpkg/icons"
 ]
 
+class ClipBoard(BaseModel):
+    value: str
+
 class TermRequest(BaseModel):
     command: Optional[str]
 
@@ -417,6 +420,27 @@ async def remove_window(window_id: str, username: str = Depends(verify_credentia
     ]
     return {"status": "removed"}
 
+@app.get("/session/window/{window_id}/clipboard")
+async def get_window_clipboard(window_id: str, username: str = Depends(verify_credentials)):
+    """Get a window's clipboard"""
+    display = ":" + str(int(window_id) + 1) # Ugly fix, I should do this differently
+    output = subprocess.check_output(["xclip", "-o", "-d", display], env={"DISPLAY": display})
+    return {"clipboard": output}
+
+@app.post("/session/window/{window_id}/clipboard")
+async def fill_window_clipboard(window_id: str, clipboard: ClipBoard, username: str = Depends(verify_credentials)):
+    """Fill a window's clipboard"""
+    if clipboard is not None:
+        if clipboard.value:
+            display = ":" + str(int(window_id) + 1) # Ugly fix, I should do this differently
+            process = subprocess.Popen(["xclip", "-d", display, "-selection", "clipboard", "-i"], stdin=subprocess.PIPE)
+            process.stdin.write(clipboard.value.encode('UTF-8'))
+            process.stdin.close()
+            # process.terminate()
+            # output = subprocess.run(["xclip", "-d", display, "-i"], input=clipboard.value, capture_output=True, text=True)
+            return {"status": "OK"}
+    raise HTTPException(status_code=400, detail="Clipboard is empty")
+
 @app.post("/terminal/start")
 async def start_terminal(req: TermRequest = None, username: str = Depends(verify_credentials)):
     """Start a new xterm.rs instance"""
@@ -426,7 +450,6 @@ async def start_terminal(req: TermRequest = None, username: str = Depends(verify
     port = get_next_port()
     
     try:
-        print("Command is", command)
         if command and command != "null":
             process = subprocess.Popen(
                 ["./xterm_rs", "--host", HOST, "--port", str(port), "--cmd", command],

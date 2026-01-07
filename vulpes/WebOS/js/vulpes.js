@@ -1,0 +1,4 @@
+const Vulpes = (() => {
+    return {
+    };
+})();

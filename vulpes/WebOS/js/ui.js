@@ -92,6 +92,7 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
 
 document.getElementById('input-color').addEventListener('change', (e) => {
     document.body.style.setProperty('--primary', e.target.value);
+    localStorage.setItem('mainColor', e.target.value);
 })
 
 // Close panels when clicking outside

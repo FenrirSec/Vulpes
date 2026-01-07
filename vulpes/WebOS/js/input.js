@@ -90,3 +90,39 @@ document.addEventListener('touchend', () => {
         }
     }
 });
+
+async function checkClipboard() {
+  try {
+    const result = await navigator.permissions.query({ name: 'clipboard-read' });
+
+    if(result.state !== 'granted'){
+      console.log('Clipboard read permission granted.')
+    }else {
+    }
+  } catch (error) {
+    console.log('ERROR:: Clipboard read permission denied:', error);
+  }
+}
+
+
+window.addEventListener('message', async function(message) {
+    if (message.data && message.data.event_id == 'window_keydown') {
+        const event = message.data.e
+        console.log(message.data)
+
+        if (event.ctrlKey && event.key == "c" || event.ctrlKey && event.key == "x") {
+            const response = await Vulpes.api.getClipboard(message.data.window)
+            const responseData = await response.json() 
+            await navigator.clipboard.writeText(responseData.clipboard)
+            console.log('CTRL + C')
+        } else if (event.ctrlKey && event.key == "v") {
+            checkClipboard()
+            const clipboardValue = await navigator.clipboard.readText()
+            console.log('clipboardValue', clipboardValue)
+            await Vulpes.api.postClipboard(message.data.window, clipboardValue)
+            console.log('CTRL + V')
+        }
+    }
+})
+
+checkClipboard()

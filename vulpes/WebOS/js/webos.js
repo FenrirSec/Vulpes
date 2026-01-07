@@ -14,7 +14,6 @@ let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
 let resizeState = null;
 let isMobile = window.innerWidth <= 768;
-let applications = [];
 let appLoadInterval = null;
 
 // Initialize
@@ -29,15 +28,19 @@ async function init() {
         document.getElementById('light-button').classList.add('active');
         document.getElementById('dark-button').classList.remove('active');
     }
-    
+    const savedColor = localStorage.getItem('mainColor')
+    if (savedColor) {
+        document.body.style.setProperty('--primary', savedColor);
+    }
+
     // Initial app load
-    await loadApplications();
+    await Vulpes.apps.loadApplications();
     
     // Restore windows after applications are loaded
     await restoreWindowsState();
     
-    // Poll for application changes every 10 seconds
-    appLoadInterval = setInterval(loadApplications, 10000);
+    // Poll for application changes every 30 seconds
+    appLoadInterval = setInterval(Vulpes.apps.loadApplications, 30000);
     
     showNotification('Vulpes Desktop ready', 'success');
 }

@@ -116,8 +116,10 @@ button:hover {
     position: relative;
     width: 100%;
     height: 100%;
-    background-color: var(--primary);
     overflow: hidden;
+    background-color: var(--primary);
+    background-image: url("wallpaper.svg");
+    background-size: auto 100%;
 }
 
 .desktop::before {
@@ -195,9 +197,11 @@ button:hover {
     width: 1.5em;
 }
 
-.icon-windows {
-    font-size: 24px;
-    margin-top: -7px;
+@-moz-document url-prefix() {
+    .icon-windows {
+        font-size: 24px;
+        margin-top: -7px;
+    }
 }
 
 /* Icon styles */
@@ -244,7 +248,6 @@ button:hover {
 }
 
 .workspace {
-    //flex: 1;
     height: 100%;
     position: relative;
     overflow: hidden;
@@ -262,6 +265,7 @@ button:hover {
 }
 
 #modal {
+    background-color: var(--bg-primary);
     border-radius: var(--radius);
     backdrop-filter: var(--bg-backdrop);
     color: var(--text-primary);
@@ -275,9 +279,8 @@ button:hover {
 
 .modalText {
     margin: 1em 0;
-    font-weight: 200;
+    font-weight: 300;
     color: white;
-    font-shadow: 1px 1px 1px  white;
 }
 
 #loginForm label {

@@ -32,7 +32,7 @@ RUN cp /root/.local/bin/oh-my-posh /bin/
 RUN chown -R "vulpes:vulpes" "/home/vulpes"
 
 # WebOS Setup
-RUN apk add --no-cache musl-dev openssl-dev openssl py3-virtualenv git
+RUN apk add --no-cache xclip musl-dev openssl-dev openssl py3-virtualenv git
 
 RUN ln -s /home/vulpes/.env/bin/vulpkg /usr/bin/vulpkg
 
@@ -57,7 +57,7 @@ USER vulpes
 RUN echo -e 'set -g default-terminal "screen-256color"\nset-option -g default-shell /bin/bash' >> ~/.tmux.conf
 
 # Setting up global user Python env
-RUN virtualenv $HOME/.env && source $HOME/.env/bin/activate && pip install websockets Pillow python-xlib git+https://github.com/lp1dev/WebX11.git@webos git+https://github.com/FenrirSec/vulpkg.git fastapi uvicorn httpx 
+RUN virtualenv $HOME/.env  && source $HOME/.env/bin/activate && pip install websockets Pillow python-xlib git+https://github.com/lp1dev/WebX11.git@webos git+https://github.com/FenrirSec/vulpkg.git fastapi uvicorn httpx
 
 # Adding .profile file
 COPY profile ~/.profile
