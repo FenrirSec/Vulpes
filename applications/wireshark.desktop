@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Name=Wireshark
+GenericName=Packet Analyzer
+Comment=Network Analyzer
+Keywords=Tools;Hacking
+Exec=/usr/bin/wireshark
+Icon=wireshark
+Terminal=false
+Type=Application
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;application/x-xpinstall;application/pdf;application/json;
+StartupNotify=true
+Categories=Network;Tool;
+Docked=true
