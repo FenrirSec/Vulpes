@@ -19,8 +19,6 @@ RUN echo "vulpes:vulpes" | chpasswd
 
 # Copying config files
 COPY setup/bashrc /home/vulpes/.bashrc
-RUN mkdir -p /home/vulpes/.config/i3
-COPY setup/i3config /home/vulpes/.config/i3/config
 
 # Installing additional packages
 RUN apk add $(cat /etc/setup/.defaultpackages)
