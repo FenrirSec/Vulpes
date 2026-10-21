@@ -1,0 +1,12 @@
+{
+  "name": "caido-cli",
+  "version": "latest",
+  "description": "Caido CLI - headless web security auditing proxy (modern Burp alternative)",
+  "author": "Caido Labs",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "curl",
+    "python3"
+  ],
+  "install_script": "# Caido ships a prebuilt glibc binary (runs on the alpine-glibc base).\n# Resolve the latest version, then download that CLI build.\nV=$(curl -fsSL https://caido.download/releases/latest | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"version\"])')\ntest -n \"$V\" || { echo '[caido-cli] ERROR: could not resolve latest version'; exit 1; }\necho \"[caido-cli] downloading v$V\"\ncurl -fsSL \"https://caido.download/releases/v$V/caido-cli-v$V-linux-x86_64.tar.gz\" -o caido-cli.tar.gz\ntar xzf caido-cli.tar.gz\nrm -f caido-cli.tar.gz\ntest -f caido-cli || { echo '[caido-cli] ERROR: caido-cli binary missing after extract'; exit 1; }\nchmod +x caido-cli\nprintf '#!/bin/sh\\nexec /opt/vulpkg/caido-cli/caido-cli \"$@\"\\n' > /usr/local/bin/caido-cli\nchmod +x /usr/local/bin/caido-cli\nchown -R vulpes:vulpes /opt/vulpkg/caido-cli 2>/dev/null || true\necho \"[caido-cli] installed v$V (glibc binary; runs on the alpine-glibc base)\""
+}

@@ -1,0 +1,18 @@
+{
+  "name": "shellgpt",
+  "version": "latest",
+  "description": "ShellGPT - AI command-line assistant",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv",
+    "gcc",
+    "musl-dev",
+    "python3-dev",
+    "libffi-dev",
+    "openssl-dev"
+  ],
+  "install_script": "python3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install shell-gpt litellm\nln -sf /opt/vulpkg/shellgpt/venv/bin/sgpt /usr/local/bin/sgpt\nchown -R vulpes:vulpes /opt/vulpkg/shellgpt 2>/dev/null || true"
+}

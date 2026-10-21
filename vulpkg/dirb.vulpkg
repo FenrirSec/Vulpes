@@ -1,0 +1,15 @@
+{
+  "name": "dirb",
+  "version": "2.22",
+  "description": "dirb - web content scanner",
+  "author": "The Dark Raver",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "gcc",
+    "make",
+    "musl-dev",
+    "curl-dev",
+    "libcurl"
+  ],
+  "install_script": "wget -q https://downloads.sourceforge.net/project/dirb/dirb/2.22/dirb222.tar.gz -O - | tar -xz --strip-components=1 -f -\nchmod -R a+x wordlists configure\n./configure CFLAGS=\"-O2 -g -fcommon\"\nmake && make install\nmkdir -p /usr/share/dirb && cp -aR wordlists /usr/share/dirb"
+}

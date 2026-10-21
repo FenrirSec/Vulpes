@@ -1,95 +1,71 @@
-// Authentication
-let authCredentials = null;
-
-
-// Check if authenticated
-async function checkAuth() {
-    const stored = localStorage.getItem('authCredentials');
-    if (stored) {
+// Authentication (HTTP basic auth against apps.py)
+Vulpes.auth = (() => {
+    async function check() {
+        const stored = Vulpes.ui.storage('authCredentials');
+        if (!stored) return false;
         try {
-            authCredentials = JSON.parse(stored);
-            // Verify credentials still work
+            Vulpes.api.setCredentials(JSON.parse(stored));
             const response = await Vulpes.api.getSession();
-            if (response.ok) {
-                return true;
-            }
+            if (response.ok) return true;
         } catch (e) {
             console.error('Auth check failed:', e);
         }
+        Vulpes.api.setCredentials(null);
+        return false;
     }
-    return false;
-}
 
-// Show login modal
-function showLoginModal() {
-    const modal = document.createElement('div');
-    modal.id = 'modal-backdrop'
-    modal.innerHTML = `
-        <div id="modal">
-            <h2 class="modalTitle">
-                Vulpes Login
-            </h2>
-<p class="modalText">Login onto your Vulpes instance with your provided credentials.</p>
-            <form id="loginForm">
-                <div class="loginInput">
-                    <input 
-                        type="text" 
-                        id="username"
-			placeholder="Username"
-                        required
-                    />
-                </div>
+    function showLogin(onSuccess) {
+        const backdrop = document.createElement('div');
+        backdrop.id = 'modal-backdrop';
+        backdrop.innerHTML = `
+            <form id="loginForm" class="login" autocomplete="on">
+                <h1>Vulpes</h1>
+                <p>Sign in with the credentials of this workstation.</p>
+                <label>Username
+                    <input type="text" id="username" autocomplete="username" required>
+                </label>
+                <label>Password
+                    <input type="password" id="password" autocomplete="current-password" required>
+                </label>
+                <div id="loginError" class="login-error" role="alert" hidden></div>
+                <button class="loginButton primary-btn" type="submit">Sign in</button>
+            </form>`;
+        document.body.appendChild(backdrop);
 
-                <div class="loginInput">
-                    <input 
-                        type="password" 
-                        id="password"
-			placeholder="Password"
-                        required
-                    />
-                </div>
-                <div id="loginError" style="display: none;"></div>
-                <button class="loginButton" type="submit">
-                    Login
-                </button>
-            </form>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const form = document.getElementById('loginForm');
-    const errorDiv = document.getElementById('loginError');
-    
-    form.addEventListener('submit', async (e) => {
-        console.log('SUBMIT')
-        e.preventDefault();
-        
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        
-        authCredentials = { username, password };
-        
-        try {
-            const response = await Vulpes.api.getSession() 
-            
-            console.log('REPONSE', response)
-            if (response.ok) {
-                localStorage.setItem('authCredentials', JSON.stringify(authCredentials));
-                modal.remove();
-                await init();
-            } else {
-                errorDiv.textContent = 'Invalid username or password';
-                errorDiv.style.display = 'block';
-                authCredentials = null;
+        const form = backdrop.querySelector('#loginForm');
+        const errorDiv = backdrop.querySelector('#loginError');
+        const button = backdrop.querySelector('.loginButton');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const credentials = {
+                username: form.querySelector('#username').value,
+                password: form.querySelector('#password').value,
+            };
+            Vulpes.api.setCredentials(credentials);
+            button.disabled = true;
+            errorDiv.hidden = true;
+            try {
+                const response = await Vulpes.api.getSession();
+                if (response.ok) {
+                    Vulpes.ui.storage('authCredentials', JSON.stringify(credentials));
+                    backdrop.remove();
+                    await onSuccess();
+                    return;
+                }
+                errorDiv.textContent = response.status === 401
+                    ? 'Wrong username or password.'
+                    : `The workstation answered with an error (HTTP ${response.status}).`;
+            } catch (error) {
+                errorDiv.textContent = 'Cannot reach the workstation. Check that it is running, then try again.';
             }
-        } catch (error) {
-            console.log(error)
-            errorDiv.textContent = 'Connection error. Please try again.';
-            errorDiv.style.display = 'block';
-            authCredentials = null;
-        }
-    });
-    
-    document.getElementById('username').focus();
-}
+            errorDiv.hidden = false;
+            Vulpes.api.setCredentials(null);
+            button.disabled = false;
+        });
+
+        form.querySelector('#username').focus();
+    }
+
+    return { check, showLogin };
+})();

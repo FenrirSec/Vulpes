@@ -1,0 +1,17 @@
+{
+  "name": "wpscan",
+  "version": "latest",
+  "description": "WPScan - WordPress security scanner",
+  "author": "WPScan",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "ruby",
+    "ruby-dev",
+    "gcc",
+    "musl-dev",
+    "make",
+    "libffi-dev",
+    "zlib-dev"
+  ],
+  "install_script": "gem install --no-document wpscan"
+}

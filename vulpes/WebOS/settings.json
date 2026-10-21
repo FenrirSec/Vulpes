@@ -1,14 +1,17 @@
 {
   "resize_mode": "resize-x11",
   "transport": "websocket",
-  "image_quality": 100,
+  "image_quality": 80,
+  "image_format": "JPEG",
   "dpi": 300,
-  "max_width": 3440,
-  "max_height": 1444,
+  "x_dpi": 96,
+  "max_width": 3840,
+  "max_height": 2160,
   "max_fps": 30,
+  "lossless_max_area": 160000,
+  "lossless_refresh_ms": 400,
   "can_start_executables": true,
   "webtransport_host": "localhost",
   "host": "0.0.0.0",
-  "cors_unsafe_allow_all": true,
-  "image_format": "JPEG"
+  "cors_unsafe_allow_all": true
 }

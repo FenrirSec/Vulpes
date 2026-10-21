@@ -1,0 +1,15 @@
+{
+  "name": "masscan",
+  "version": "latest",
+  "description": "masscan - internet-scale port scanner",
+  "author": "robertdavidgraham",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git",
+    "gcc",
+    "make",
+    "musl-dev",
+    "libpcap-dev"
+  ],
+  "install_script": "if ! apk add masscan 2>/dev/null; then\n  git clone --depth 1 https://github.com/robertdavidgraham/masscan.git src\n  make -C src -j\"$(nproc)\"\n  cp src/bin/masscan /usr/local/bin/\nfi"
+}

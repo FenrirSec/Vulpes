@@ -1,0 +1,11 @@
+{
+  "name": "ffuf",
+  "version": "latest",
+  "description": "Fast web fuzzer",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "go"
+  ],
+  "install_script": "export GOROOT=/usr/lib/go GOBIN=/usr/local/bin GOPATH=/opt/vulpkg/.go GOFLAGS=-mod=mod GOTOOLCHAIN=auto\ngo install github.com/ffuf/ffuf/v2@latest"
+}

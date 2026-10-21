@@ -1,0 +1,18 @@
+{
+  "name": "certipy",
+  "version": "latest",
+  "description": "Certipy - Active Directory Certificate Services abuse",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv",
+    "gcc",
+    "musl-dev",
+    "python3-dev",
+    "libffi-dev",
+    "openssl-dev"
+  ],
+  "install_script": "python3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install certipy-ad\nln -sf /opt/vulpkg/certipy/venv/bin/certipy /usr/local/bin/certipy\nchown -R vulpes:vulpes /opt/vulpkg/certipy 2>/dev/null || true"
+}

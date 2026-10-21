@@ -1,0 +1,14 @@
+{
+  "name": "naabu",
+  "version": "latest",
+  "description": "Fast port scanner (ProjectDiscovery)",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "go",
+    "libpcap-dev",
+    "gcc",
+    "musl-dev"
+  ],
+  "install_script": "export GOROOT=/usr/lib/go GOBIN=/usr/local/bin GOPATH=/opt/vulpkg/.go GOFLAGS=-mod=mod GOTOOLCHAIN=auto\ngo install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
+}

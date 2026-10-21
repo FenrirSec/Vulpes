@@ -1,0 +1,16 @@
+{
+  "name": "vscode",
+  "version": "web",
+  "description": "VS Code in the browser (code-server) - opens in a Vulpes window",
+  "author": "Coder",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "curl",
+    "libstdc++",
+    "libgcc"
+  ],
+  "install_script": "set -e\necho '[vscode] installing code-server (standalone build)...'\n# The standalone bundles its own node + all web extensions. It is glibc-built,\n# which runs on this alpine-glibc image (unlike the npm build, whose nested\n# node_modules reliably corrupts during extraction).\ncurl -fsSL https://code-server.dev/install.sh | sh -s -- --method standalone --version 4.141.0\nif ! command -v code-server >/dev/null 2>&1; then\n  echo '[vscode] ERROR: installer did not produce a code-server binary.'\n  exit 1\nfi\nif ! code-server --version >/dev/null 2>&1; then\n  echo '[vscode] ERROR: code-server installed but will not run on this image:'\n  code-server --version || true\n  echo '[vscode] This is usually a missing glibc runtime library. Nothing was started.'\n  exit 1\nfi\nln -sf \"$(command -v code-server)\" /usr/local/bin/code-server\nmkdir -p /var/lib/vulpkg/startup\ncat > /var/lib/vulpkg/startup/code-server.sh <<'SH'\n#!/bin/bash\n# Started at container boot by run.sh, and once now at install time.\nexport PATH=\"$PATH:/usr/local/bin:/usr/bin\"\npgrep -f 'code-server' >/dev/null 2>&1 && exit 0\nexec code-server --bind-addr 127.0.0.1:8800 --auth none --disable-telemetry --disable-update-check\nSH\nchmod 755 /var/lib/vulpkg/startup/code-server.sh\n# start it now (as the vulpes user) so it's usable without a container restart\nsetsid sudo -u vulpes -H bash /var/lib/vulpkg/startup/code-server.sh >/tmp/code-server.log 2>&1 &\nsleep 2\necho '[vscode] code-server started on 127.0.0.1:8800 - open \"VS Code\" from the app launcher'",
+  "files": {
+    "/var/lib/vulpkg/applications/vscode.desktop": "[Desktop Entry]\nVersion=1.0\nType=Link\nName=VS Code\nGenericName=Code Editor\nComment=Visual Studio Code (code-server) in your browser\nURL=/port/8800/\nIcon=vscode\nCategories=Development;IDE;\nKeywords=editor;ide;code;development;\n"
+  }
+}

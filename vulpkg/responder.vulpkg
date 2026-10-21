@@ -1,0 +1,12 @@
+{
+  "name": "responder",
+  "version": "latest",
+  "description": "Responder - LLMNR/NBT-NS/mDNS poisoner",
+  "author": "lgandx",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git",
+    "python3"
+  ],
+  "install_script": "git clone --depth 1 https://github.com/lgandx/Responder.git src\nprintf '#!/bin/bash\\ncd /opt/vulpkg/responder/src && exec python3 Responder.py \"$@\"\\n' > /usr/local/bin/responder\nchmod +x /usr/local/bin/responder\nchown -R vulpes:vulpes /opt/vulpkg/responder 2>/dev/null || true"
+}

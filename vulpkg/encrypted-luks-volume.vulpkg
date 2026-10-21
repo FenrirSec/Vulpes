@@ -1,0 +1,12 @@
+{
+  "name": "encrypted-luks-volume",
+  "version": "latest",
+  "description": "LUKS tooling + a helper to create encrypted volumes",
+  "author": "Fenrir",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "cryptsetup",
+    "e2fsprogs"
+  ],
+  "install_script": "cat > /usr/local/bin/luks-volume <<'SH'\n#!/bin/bash\n# Create and mount a LUKS-encrypted volume file.\n# Usage: luks-volume <file> <name> <size-mb> [mountpoint]\nset -e\nFILE=\"${1:-volume.img}\"; NAME=\"${2:-enc1}\"; SIZE=\"${3:-2048}\"; MNT=\"${4:-/mnt/$NAME}\"\ndd if=/dev/urandom of=\"$FILE\" bs=1M count=\"$SIZE\" status=progress\ncryptsetup luksFormat --pbkdf argon2id \"$FILE\"\ncryptsetup luksOpen \"$FILE\" \"$NAME\"\nmkfs.ext4 -m0 \"/dev/mapper/$NAME\"\nmkdir -p \"$MNT\"; mount \"/dev/mapper/$NAME\" \"$MNT\"\necho \"mounted at $MNT (close with: umount $MNT && cryptsetup luksClose $NAME)\"\nSH\nchmod +x /usr/local/bin/luks-volume\necho '[luks] run: luks-volume <file> <name> <size-mb> [mountpoint]'"
+}

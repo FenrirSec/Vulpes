@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>WebX11 display %%DISPLAY_ID%%</title>
+<style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0e1116; }
+    #windowImage { position: absolute; left: 0; top: 0; display: block; outline: none; touch-action: none;
+                   user-select: none; -webkit-user-select: none; cursor: default; }
+    body.stretch #windowImage { width: 100%; height: 100%; }
+    #ime { position: absolute; left: 0; top: 0; width: 2px; height: 2px; padding: 0; border: 0; margin: 0;
+           opacity: 0; resize: none; overflow: hidden; color: transparent; background: transparent;
+           caret-color: transparent; outline: none; pointer-events: none; z-index: -1; }
+    #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+               flex-direction: column; gap: 14px; background: rgba(14, 17, 22, .72); color: #c9d1d9;
+               font: 500 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .02em;
+               opacity: 0; pointer-events: none; transition: opacity .2s; }
+    #overlay.show { opacity: 1; pointer-events: auto; }
+    #overlay .spin { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15);
+                     border-top-color: rgba(255,255,255,.8); animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #hud { position: fixed; right: 8px; top: 8px; padding: 6px 9px; border-radius: 6px; display: none;
+           background: rgba(0,0,0,.72); color: #9be9a8; font: 11px/1.45 ui-monospace, Menlo, Consolas, monospace;
+           white-space: pre; pointer-events: none; z-index: 5; }
+    #hud.show { display: block; }
+</style>
+</head>
+<body>
+<canvas id="windowImage" tabindex="-1"></canvas>
+<textarea id="ime" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-hidden="true"></textarea>
+<div id="overlay"><div class="spin"></div><div id="overlayText">Connecting…</div></div>
+<div id="hud"></div>
+<script>
+(() => {
+'use strict';
+const DISPLAY_ID = %%DISPLAY_ID%%;
+const canvas = document.getElementById('windowImage');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+const ime = document.getElementById('ime');
+const overlay = document.getElementById('overlay');
+const overlayText = document.getElementById('overlayText');
+const hud = document.getElementById('hud');
+const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+const toParent = (type, extra = {}) => { try { window.parent && window.parent !== window && window.parent.postMessage({ type, display: DISPLAY_ID, ...extra }, '*'); } catch (e) {} };
+
+let settings = { resize_mode: 'resize-x11' };
+let ws = null, wt = null, wtWriter = null;
+let connected = false, everConnected = false, gone = false, reconnectDelay = 400;
+
+// ------------------------------------------------------------------ stats
+const stats = { bytes: 0, updates: 0, rects: 0, lastSize: 0, drawMs: 0, window: [] };
+window.webx11 = { stats, displayId: DISPLAY_ID };
+function tickStats(size, nrects, drawMs) {
+    const now = performance.now();
+    stats.bytes += size; stats.updates++; stats.rects += nrects; stats.lastSize = size; stats.drawMs = drawMs;
+    stats.window.push([now, size]);
+    while (stats.window.length && now - stats.window[0][0] > 1000) stats.window.shift();
+}
+setInterval(() => {
+    if (!hud.classList.contains('show')) return;
+    const kb = stats.window.reduce((a, [, s]) => a + s, 0) / 1024;
+    hud.textContent = `display ${DISPLAY_ID}  ${canvas.width}x${canvas.height}\n` +
+        `updates/s ${stats.window.length}   ${kb.toFixed(0)} KB/s\n` +
+        `last ${(stats.lastSize / 1024).toFixed(1)} KB   draw ${stats.drawMs.toFixed(1)} ms\n` +
+        `transport ${wtWriter ? 'webtransport' : 'websocket'}`;
+}, 250);
+
+// -------------------------------------------------------------- transport
+function send(msg) {
+    if (wtWriter) {
+        wtWriter.write(new TextEncoder().encode(JSON.stringify(msg))).catch(() => {});
+    } else if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+    }
+}
+
+function showOverlay(text) { overlayText.textContent = text; overlay.classList.add('show'); }
+function hideOverlay() { overlay.classList.remove('show'); }
+
+function wsUrl() {
+    const base = location.href.split(/[?#]/)[0].replace(/\/$/, '');
+    return base.replace(/^http/, 'ws') + '/ws/' + DISPLAY_ID;
+}
+
+function connectWebSocket() {
+    if (gone) return;
+    ws = new WebSocket(wsUrl());
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = () => {
+        connected = everConnected = true;
+        reconnectDelay = 400;
+        hideOverlay();
+        sendResize(true);
+    };
+    ws.onmessage = (ev) => {
+        if (typeof ev.data === 'string') onControl(JSON.parse(ev.data));
+        else onFrame(ev.data);
+    };
+    ws.onclose = (ev) => {
+        connected = false;
+        if (ev.code === 4404) {
+            gone = true;
+            showOverlay('This application is no longer running');
+            toParent('webx11:gone');
+            return;
+        }
+        showOverlay(everConnected ? 'Connection lost, reconnecting…' : 'Connecting…');
+        setTimeout(connectWebSocket, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 5000);
+    };
+}
+
+async function connectWebTransport() {
+    if (!window.WebTransport) return connectWebSocket();
+    try {
+        wt = new WebTransport(`https://${location.hostname || 'localhost'}:4433/wt/${DISPLAY_ID}`);
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000));
+        await Promise.race([wt.ready, timeout]);
+        wtWriter = wt.datagrams.writable.getWriter();
+        connected = everConnected = true;
+        hideOverlay();
+        sendResize(true);
+        (async () => {
+            const reader = wt.incomingUnidirectionalStreams.getReader();
+            for (;;) {
+                const { value: stream, done } = await reader.read();
+                if (done) break;
+                new Response(stream).arrayBuffer().then(buf => onFrame(buf.slice(14)));
+            }
+        })();
+        wt.closed.finally(() => { wtWriter = null; connected = false; connectWebSocket(); });
+    } catch (e) {
+        console.warn('WebTransport unavailable, using WebSocket', e);
+        wtWriter = null;
+        connectWebSocket();
+    }
+}
+
+function onControl(msg) {
+    if (msg.settings) {
+        settings = Object.assign(settings, msg.settings);
+        document.body.classList.toggle('stretch', settings.resize_mode === 'stretch');
+        sendResize(true);
+        return;
+    }
+    switch (msg.type) {
+        case 'cursor':
+            canvas.style.cursor = msg.png ? `url(data:image/png;base64,${msg.png}) ${msg.xhot} ${msg.yhot}, default` : 'none';
+            break;
+        case 'clipboard':
+            writeClipboard(msg.text || '');
+            break;
+        case 'app_exit':
+            toParent('webx11:app_exit');
+            break;
+    }
+}
+
+// --------------------------------------------------------------- drawing
+let drawChain = Promise.resolve();
+let firstFrame = true;
+const MIME = ['image/jpeg', 'image/png'];
+
+function onFrame(buf) {
+    const size = buf.byteLength;
+    const dv = new DataView(buf);
+    if (size < 14 || dv.getUint8(0) !== 0x56 || dv.getUint8(1) !== 0x58) {
+        // legacy: a whole frame as a single JPEG/PNG
+        const bmp = createImageBitmap(new Blob([buf]));
+        drawChain = drawChain.then(async () => {
+            const b = await bmp;
+            if (canvas.width !== b.width || canvas.height !== b.height) resizeCanvas(b.width, b.height);
+            ctx.drawImage(b, 0, 0); b.close();
+            frameDrawn(size, 1, 0);
+        }).catch(() => {});
+        return;
+    }
+    const flags = dv.getUint8(3), w = dv.getUint16(4, true), h = dv.getUint16(6, true);
+    const n = dv.getUint16(8, true), seq = dv.getUint32(10, true);
+    const rects = [];
+    let off = 14;
+    for (let i = 0; i < n; i++) {
+        const x = dv.getUint16(off, true), y = dv.getUint16(off + 2, true);
+        const fmt = dv.getUint8(off + 8), len = dv.getUint32(off + 10, true);
+        const blob = new Blob([new Uint8Array(buf, off + 14, len)], { type: MIME[fmt] || 'image/png' });
+        rects.push({ x, y, bitmap: createImageBitmap(blob) });  // decode starts now, in parallel
+        off += 14 + len;
+    }
+    drawChain = drawChain.then(async () => {
+        const t0 = performance.now();
+        let bitmaps;
+        try {
+            bitmaps = await Promise.all(rects.map(r => r.bitmap));
+        } catch (e) {
+            console.warn('decode failed, requesting a full refresh', e);
+            send({ type: 'ack', seq });
+            send({ type: 'refresh' });
+            return;
+        }
+        if (canvas.width !== w || canvas.height !== h) resizeCanvas(w, h);
+        for (let i = 0; i < rects.length; i++) {
+            ctx.drawImage(bitmaps[i], rects[i].x, rects[i].y);
+            bitmaps[i].close();
+        }
+        send({ type: 'ack', seq });
+        frameDrawn(size, n, performance.now() - t0);
+    });
+}
+
+function frameDrawn(size, n, ms) {
+    tickStats(size, n, ms);
+    if (firstFrame) { firstFrame = false; hideOverlay(); toParent('webx11:ready'); }
+}
+
+function resizeCanvas(w, h) {
+    canvas.width = w;
+    canvas.height = h;
+    if (settings.resize_mode !== 'stretch') {
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+    }
+}
+
+// ----------------------------------------------------------------- resize
+let resizeTimer = null, lastSent = '';
+function sendResize(force) {
+    if (settings.resize_mode !== 'resize-x11') return;
+    clearTimeout(resizeTimer);
+    const go = () => {
+        const w = Math.max(1, Math.floor(document.documentElement.clientWidth));
+        const h = Math.max(1, Math.floor(document.documentElement.clientHeight));
+        const key = w + 'x' + h;
+        if (!force && key === lastSent) return;
+        lastSent = key;
+        send({ type: 'resize', width: w, height: h });
+    };
+    if (force) go(); else resizeTimer = setTimeout(go, 90);
+}
+new ResizeObserver(() => sendResize(false)).observe(document.documentElement);
+
+// ------------------------------------------------------------------ mouse
+const BUTTONS = [1, 2, 3, 8, 9];  // DOM button index -> X button
+function pointerPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const sx = canvas.width / (r.width || 1), sy = canvas.height / (r.height || 1);
+    return {
+        x: Math.max(0, Math.min(canvas.width - 1, Math.round((e.clientX - r.left) * sx))),
+        y: Math.max(0, Math.min(canvas.height - 1, Math.round((e.clientY - r.top) * sy))),
+    };
+}
+function mods(e) {
+    const m = [];
+    if (e.ctrlKey || (isMac && e.metaKey)) m.push('ctrl');
+    if (e.shiftKey) m.push('shift');
+    if (e.altKey) m.push('alt');
+    if (e.metaKey && !isMac) m.push('meta');
+    return m;
+}
+
+let pendingMove = null, moveScheduled = false;
+function flushMove() {
+    moveScheduled = false;
+    if (pendingMove) { send({ type: 'mousemove', ...pendingMove }); pendingMove = null; }
+}
+canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch' && touchScroll.active) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    pendingMove = pointerPos(evs.length ? evs[evs.length - 1] : e);
+    if (!moveScheduled) { moveScheduled = true; requestAnimationFrame(flushMove); }
+});
+const buttonsDown = new Set();
+canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch' && touchScroll.active) return;
+    e.preventDefault();
+    focusInput();
+    toParent('webx11:focus');
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    const p = pointerPos(e);
+    pendingMove = null;
+    const button = BUTTONS[e.button] || 1;
+    buttonsDown.add(button);
+    send({ type: 'mousedown', ...p, button, mods: mods(e) });
+});
+function pointerUp(e) {
+    const button = BUTTONS[e.button] || 1;
+    if (!buttonsDown.has(button)) return;
+    buttonsDown.delete(button);
+    if (pendingMove) flushMove();
+    send({ type: 'mouseup', ...pointerPos(e), button });
+}
+canvas.addEventListener('pointerup', pointerUp);
+canvas.addEventListener('pointercancel', pointerUp);
+canvas.addEventListener('lostpointercapture', (e) => {
+    // capture lost without a pointerup (e.g. alert, focus change): release all buttons
+    for (const b of [...buttonsDown]) { buttonsDown.delete(b); send({ type: 'mouseup', ...pointerPos(e), button: b }); }
+});
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('auxclick', (e) => e.preventDefault());
+
+// wheel: accumulate pixel deltas into X wheel clicks (trackpads send many tiny deltas)
+let wheel = { x: 0, y: 0, pos: null, scheduled: false };
+const WHEEL_STEP = 100;
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const k = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1;
+    wheel.y += e.deltaY * k; wheel.x += e.deltaX * k; wheel.pos = pointerPos(e);
+    if (!wheel.scheduled) {
+        wheel.scheduled = true;
+        requestAnimationFrame(() => {
+            wheel.scheduled = false;
+            const dy = Math.trunc(wheel.y / WHEEL_STEP), dx = Math.trunc(wheel.x / WHEEL_STEP);
+            if (dy || dx) {
+                wheel.y -= dy * WHEEL_STEP; wheel.x -= dx * WHEEL_STEP;
+                send({ type: 'scroll', ...wheel.pos, dx, dy });
+            }
+        });
+    }
+}, { passive: false });
+
+// touch: two-finger scroll, double tap opens the on-screen keyboard
+const touchScroll = { active: false, lastY: 0, acc: 0, lastTap: 0 };
+canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        touchScroll.active = true;
+        touchScroll.lastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        touchScroll.acc = 0;
+        for (const b of [...buttonsDown]) { buttonsDown.delete(b); send({ type: 'mouseup', ...pointerPos(e.touches[0]), button: b }); }
+        e.preventDefault();
+    } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - touchScroll.lastTap < 300) { ime.focus(); }
+        touchScroll.lastTap = now;
+    }
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+    if (!touchScroll.active || e.touches.length !== 2) return;
+    e.preventDefault();
+    const y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    touchScroll.acc += (touchScroll.lastY - y);
+    touchScroll.lastY = y;
+    const clicks = Math.trunc(touchScroll.acc / 30);
+    if (clicks) {
+        touchScroll.acc -= clicks * 30;
+        const c = { clientX: (e.touches[0].clientX + e.touches[1].clientX) / 2, clientY: y };
+        send({ type: 'scroll', ...pointerPos(c), dx: 0, dy: clicks });
+    }
+}, { passive: false });
+canvas.addEventListener('touchend', (e) => { if (e.touches.length < 2) touchScroll.active = false; });
+
+// --------------------------------------------------------------- keyboard
+//
+// No key is ever "held" on the X side. Shortcuts and special keys are sent
+// as one atomic message ({type:'key', key, mods}); the server presses the
+// modifiers, the key, and releases everything. Characters go through the
+// hidden textarea so dead keys, AltGr/Option layers and IMEs produce the
+// exact character, which the server types regardless of the X layout.
+const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'AltGraph', 'CapsLock', 'NumLock',
+    'ScrollLock', 'OS', 'Hyper', 'Super', 'Fn', 'FnLock', 'Symbol', 'SymbolLock']);
+const IGNORED_KEYS = new Set(['Dead', 'Unidentified', 'Process', 'Compose']);
+
+function focusInput() {
+    if (document.activeElement !== ime) ime.focus({ preventScroll: true });
+}
+
+function isAltGr(e, printable) {
+    if (e.getModifierState && e.getModifierState('AltGraph')) return true;
+    // Windows reports AltGr as Ctrl+Alt; a symbol produced that way is text
+    return !isMac && printable && e.ctrlKey && e.altKey && !/^[a-z0-9]$/i.test(e.key);
+}
+
+function comboKey(e) {
+    const k = e.key;
+    if (/^[a-zA-Z]$/.test(k)) return k.toLowerCase();
+    if (/^Digit[0-9]$/.test(e.code)) return e.code.slice(5);
+    if (k.length === 1 && k.charCodeAt(0) < 127) return k;
+    if (/^Key[A-Z]$/.test(e.code)) return e.code.slice(3).toLowerCase();  // non-latin layouts
+    return k;
+}
+
+function isPasteCombo(e, key) {
+    return (key === 'v' && (e.ctrlKey || (isMac && e.metaKey))) || (key === 'Insert' && e.shiftKey && !e.ctrlKey);
+}
+
+let pendingPaste = null;
+
+function onKeyDown(e) {
+    if (e.isComposing || e.keyCode === 229) return;
+    const k = e.key;
+    if (MODIFIER_KEYS.has(k) || IGNORED_KEYS.has(k)) return;
+
+    // local hotkey: Ctrl+Alt+Shift+S toggles the stats overlay
+    if (e.ctrlKey && e.altKey && e.shiftKey && e.code === 'KeyS') {
+        hud.classList.toggle('show'); e.preventDefault(); return;
+    }
+
+    const printable = [...k].length === 1;
+    const textLike = printable && (
+        (!e.ctrlKey && !e.metaKey && !e.altKey) ||
+        isAltGr(e, printable) ||
+        (isMac && e.altKey && !e.ctrlKey && !e.metaKey)   // Option layer on macOS
+    );
+    if (textLike) { flushClipboardWrite(); return; }  // the textarea 'input' event sends it
+
+    const key = printable ? comboKey(e) : k;
+    const m = mods(e);
+    flushClipboardWrite();
+
+    if (isPasteCombo(e, key)) {
+        // let the browser fire 'paste' on the textarea so we get the local clipboard
+        clearTimeout(pendingPaste && pendingPaste.timer);
+        pendingPaste = { key, mods: m, timer: setTimeout(() => {
+            if (pendingPaste) { send({ type: 'key', key: pendingPaste.key, mods: pendingPaste.mods }); pendingPaste = null; }
+        }, 150) };
+        return;
+    }
+
+    e.preventDefault();
+    send({ type: 'key', key, mods: m });
+}
+
+ime.addEventListener('keydown', onKeyDown);
+document.addEventListener('keydown', (e) => { if (e.target !== ime) { focusInput(); onKeyDown(e); } });
+
+ime.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
+    const combo = pendingPaste || { key: 'v', mods: ['ctrl'] };
+    if (pendingPaste) { clearTimeout(pendingPaste.timer); pendingPaste = null; }
+    if (text) send({ type: 'paste', text, key: combo.key, mods: combo.mods });
+    else send({ type: 'key', key: combo.key, mods: combo.mods });
+});
+
+ime.addEventListener('input', (e) => {
+    const t = e.inputType || '';
+    if (t === 'insertCompositionText' || e.isComposing) return;
+    if ((t === 'insertText' || t === 'insertReplacementText' || t === '') && e.data) {
+        send({ type: 'text_input', text: e.data });
+    } else if (t === 'insertLineBreak' || t === 'insertParagraph') {
+        send({ type: 'key', key: 'Enter', mods: [] });
+    } else if (t === 'deleteContentBackward') {
+        send({ type: 'key', key: 'Backspace', mods: [] });
+    } else if (t === 'deleteContentForward') {
+        send({ type: 'key', key: 'Delete', mods: [] });
+    } else if (!t && ime.value) {
+        send({ type: 'text_input', text: ime.value });
+    }
+    ime.value = '';
+});
+ime.addEventListener('compositionend', (e) => {
+    if (e.data) send({ type: 'text_input', text: e.data });
+    ime.value = '';
+});
+
+// Safety net: whenever this frame stops receiving keyboard/mouse events,
+// tell the server to release anything that might still be down.
+function releaseAll() {
+    buttonsDown.clear();
+    send({ type: 'release_all' });
+}
+window.addEventListener('blur', releaseAll);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+window.addEventListener('pagehide', releaseAll);
+window.addEventListener('focus', () => focusInput());
+
+// ------------------------------------------------------------- clipboard
+let clipboardPending = null;
+async function writeClipboard(text) {
+    clipboardPending = text;
+    await flushClipboardWrite();
+}
+async function flushClipboardWrite() {
+    if (clipboardPending === null || !navigator.clipboard) return;
+    const text = clipboardPending;
+    try {
+        await navigator.clipboard.writeText(text);
+        if (clipboardPending === text) clipboardPending = null;
+        toParent('webx11:clipboard', { length: text.length });
+    } catch (e) {
+        // no user activation or focus yet: retried on the next key/click
+    }
+}
+window.addEventListener('pointerdown', flushClipboardWrite, true);
+
+// -------------------------------------------------------- parent messages
+window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.type === 'webx11:focus') { focusInput(); flushClipboardWrite(); }
+    else if (d.type === 'webx11:release_all') releaseAll();
+    else if (d.type === 'webx11:hud') hud.classList.toggle('show', d.show === undefined ? !hud.classList.contains('show') : !!d.show);
+    else if (d.type === 'webx11:refresh') send({ type: 'refresh' });
+});
+
+// ------------------------------------------------------------------ start
+showOverlay('Connecting…');
+(async () => {
+    try {
+        const r = await fetch(new URL('../../settings.json', location.href), { cache: 'no-store' });
+        const j = await r.json();
+        settings = Object.assign(settings, j.settings || j);
+    } catch (e) { /* settings also arrive over the socket */ }
+    if (settings.transport === 'webtransport') connectWebTransport(); else connectWebSocket();
+})();
+focusInput();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "rustscan",
+  "version": "latest",
+  "description": "rustscan - ultra-fast modern port scanner (feeds nmap)",
+  "author": "RustScan",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "rust",
+    "cargo",
+    "build-base"
+  ],
+  "install_script": "export CARGO_HOME=/opt/vulpkg/rustscan/.cargo\ncargo install rustscan --root /usr/local --locked\ncommand -v rustscan >/dev/null || { echo '[rustscan] ERROR: cargo did not install rustscan'; exit 1; }\nchown -R vulpes:vulpes /opt/vulpkg/rustscan 2>/dev/null || true"
+}

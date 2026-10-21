@@ -1,0 +1,18 @@
+{
+  "name": "impacket",
+  "version": "latest",
+  "description": "Impacket - classes for network protocols (AD toolkit)",
+  "author": "Fortra",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv",
+    "gcc",
+    "musl-dev",
+    "python3-dev",
+    "libffi-dev",
+    "openssl-dev"
+  ],
+  "install_script": "python3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install impacket\n# impacket installs its example tools as <name>.py in the venv; expose each as\n# impacket-<name> on PATH (e.g. impacket-secretsdump).\nfor f in /opt/vulpkg/impacket/venv/bin/*.py; do\n  [ -e \"$f\" ] || continue\n  b=$(basename \"$f\" .py)\n  ln -sf \"$f\" \"/usr/local/bin/impacket-$b\"\ndone\ncommand -v impacket-secretsdump >/dev/null || { echo '[impacket] ERROR: scripts not linked'; exit 1; }\necho '[impacket] tools available as impacket-* (e.g. impacket-secretsdump, impacket-wmiexec)'\nchown -R vulpes:vulpes /opt/vulpkg/impacket 2>/dev/null || true"
+}

@@ -1,0 +1,16 @@
+{
+  "name": "nikto",
+  "version": "latest",
+  "description": "nikto - web server scanner",
+  "author": "sullo",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git",
+    "perl",
+    "perl-net-ssleay",
+    "perl-xml-writer",
+    "perl-json",
+    "perl-io-socket-ssl"
+  ],
+  "install_script": "git clone --depth 1 https://github.com/sullo/nikto.git src\nprintf '#!/bin/bash\\nexec perl /opt/vulpkg/nikto/src/program/nikto.pl \"$@\"\\n' > /usr/local/bin/nikto\nchmod +x /usr/local/bin/nikto\nchown -R vulpes:vulpes /opt/vulpkg/nikto 2>/dev/null || true"
+}

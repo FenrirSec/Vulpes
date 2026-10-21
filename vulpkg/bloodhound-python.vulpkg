@@ -1,0 +1,18 @@
+{
+  "name": "bloodhound-python",
+  "version": "latest",
+  "description": "BloodHound Active Directory data ingestor",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv",
+    "gcc",
+    "musl-dev",
+    "python3-dev",
+    "libffi-dev",
+    "openssl-dev"
+  ],
+  "install_script": "python3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install bloodhound\nln -sf /opt/vulpkg/bloodhound-python/venv/bin/bloodhound-python /usr/local/bin/bloodhound-python\nchown -R vulpes:vulpes /opt/vulpkg/bloodhound-python 2>/dev/null || true"
+}

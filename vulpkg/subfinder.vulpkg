@@ -1,0 +1,11 @@
+{
+  "name": "subfinder",
+  "version": "latest",
+  "description": "Passive subdomain enumeration (ProjectDiscovery)",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "go"
+  ],
+  "install_script": "export GOROOT=/usr/lib/go GOBIN=/usr/local/bin GOPATH=/opt/vulpkg/.go GOFLAGS=-mod=mod GOTOOLCHAIN=auto\ngo install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+}

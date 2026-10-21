@@ -1,0 +1,12 @@
+{
+  "name": "sqlmap",
+  "version": "latest",
+  "description": "sqlmap - automatic SQL injection and takeover",
+  "author": "sqlmapproject",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git",
+    "python3"
+  ],
+  "install_script": "git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git src\nprintf '#!/bin/bash\\nexec python3 /opt/vulpkg/sqlmap/src/sqlmap.py \"$@\"\\n' > /usr/local/bin/sqlmap\nchmod +x /usr/local/bin/sqlmap\nchown -R vulpes:vulpes /opt/vulpkg/sqlmap 2>/dev/null || true"
+}

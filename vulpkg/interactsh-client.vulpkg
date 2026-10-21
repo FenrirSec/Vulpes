@@ -1,0 +1,9 @@
+{
+  "name": "interactsh-client",
+  "version": "latest",
+  "description": "interactsh-client - out-of-band (OOB) interaction gathering (ProjectDiscovery)",
+  "author": "projectdiscovery",
+  "requires_sudo": true,
+  "alpine_packages": ["go"],
+  "install_script": "export GOROOT=/usr/lib/go GOBIN=/usr/local/bin GOPATH=/opt/vulpkg/.go GOFLAGS=-mod=mod GOTOOLCHAIN=auto\ngo install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest"
+}

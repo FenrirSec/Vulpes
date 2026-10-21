@@ -1,0 +1,16 @@
+{
+  "name": "burpsuite",
+  "version": "2024.10.3",
+  "description": "Burp Suite Community Edition - web security testing",
+  "author": "PortSwigger",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "openjdk21-jre",
+    "wget"
+  ],
+  "install_script": "wget 'https://portswigger-cdn.net/burp/releases/download?product=community&version=2024.10.3&type=Jar' -O burp.jar\nchown -R vulpes:vulpes /opt/vulpkg/burpsuite 2>/dev/null || true",
+  "files": {
+    "burp.sh": "#!/bin/bash\nexec java -jar /opt/vulpkg/burpsuite/burp.jar \"$@\"\n",
+    "/var/lib/vulpkg/applications/burpsuite.desktop": "[Desktop Entry]\nVersion=1.0\nType=Application\nName=Burp Suite\nGenericName=Web Security\nComment=Burp Suite Community Edition\nExec=/opt/vulpkg/burpsuite/burp.sh\nIcon=burpsuite\nTerminal=false\nStartupNotify=true\nCategories=Development;Network;Security;\n"
+  }
+}

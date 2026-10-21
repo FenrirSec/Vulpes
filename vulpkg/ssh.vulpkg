@@ -1,0 +1,11 @@
+{
+  "name": "ssh",
+  "version": "latest",
+  "description": "OpenSSH server - start an SSH daemon on this workstation",
+  "author": "OpenBSD",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "openssh-server"
+  ],
+  "install_script": "ssh-keygen -A\nrc-service sshd start 2>/dev/null || /usr/sbin/sshd\necho '[ssh] sshd started'"
+}

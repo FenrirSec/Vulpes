@@ -1,0 +1,13 @@
+{
+  "name": "arjun",
+  "version": "latest",
+  "description": "arjun - HTTP parameter discovery suite",
+  "author": "s0md3v",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv"
+  ],
+  "install_script": "python3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install arjun\nln -sf /opt/vulpkg/arjun/venv/bin/arjun /usr/local/bin/arjun\nchown -R vulpes:vulpes /opt/vulpkg/arjun 2>/dev/null || true"
+}

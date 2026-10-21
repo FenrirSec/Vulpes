@@ -1,0 +1,11 @@
+{
+  "name": "forensics",
+  "version": "latest",
+  "description": "Forensics basics - exiftool and binwalk",
+  "author": "Fenrir",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "exiftool"
+  ],
+  "install_script": "# binwalk 3.x lives in edge/testing and needs deps from edge/main\napk add --no-progress binwalk \\\n  --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing \\\n  --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \\\n  || echo '[forensics] binwalk unavailable (needs edge/testing + edge/main)'\ncommand -v binwalk >/dev/null && binwalk --help >/dev/null 2>&1 && echo '[forensics] binwalk OK'\nexiftool -ver >/dev/null && echo '[forensics] exiftool OK'"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "crackmapexec",
+  "version": "latest",
+  "description": "CrackMapExec (legacy; prefer netexec)",
+  "author": "byt3bl33d3r",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git",
+    "poetry",
+    "python3-dev",
+    "libjpeg",
+    "jpeg-dev",
+    "rust",
+    "cargo"
+  ],
+  "install_script": "git clone --depth 1 https://github.com/byt3bl33d3r/CrackMapExec.git src\ncd src\ngit config --system --add safe.directory /opt/vulpkg/crackmapexec/src\nsed -i 's/sqlalchemy = \"^2.0.4\"/sqlalchemy = \">2.0.4\"/g' pyproject.toml\n# keep the venv inside the repo so the vulpes user can find it at runtime\npoetry config virtualenvs.in-project true --local\n# the sed above changed a dependency constraint, so the committed lock is stale\npoetry lock\npoetry install\nprintf '#!/bin/bash\\ncd /opt/vulpkg/crackmapexec/src && exec poetry run cme \"$@\"\\n' > /usr/local/bin/cme\nchmod +x /usr/local/bin/cme\nchown -R vulpes:vulpes /opt/vulpkg/crackmapexec 2>/dev/null || true"
+}

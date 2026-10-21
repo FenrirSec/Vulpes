@@ -1,0 +1,9 @@
+{
+  "name": "tlsx",
+  "version": "latest",
+  "description": "tlsx - fast TLS grabber/analyzer (ProjectDiscovery)",
+  "author": "projectdiscovery",
+  "requires_sudo": true,
+  "alpine_packages": ["go"],
+  "install_script": "export GOROOT=/usr/lib/go GOBIN=/usr/local/bin GOPATH=/opt/vulpkg/.go GOFLAGS=-mod=mod GOTOOLCHAIN=auto\ngo install github.com/projectdiscovery/tlsx/cmd/tlsx@latest"
+}
