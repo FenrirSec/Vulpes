@@ -131,14 +131,19 @@ fi
 
 cd;
 
-# if running inside xterm_rs in non-interactive we make the shell fully interactive with python
-# This is a patch, not supposed to be a long-term fix. But we'll see...
+# Vulpes terminal - Catppuccin Mocha
+cd ~
 
-if [[ -z "${INTERACTIVE}" ]];then
-    export INTERACTIVE=1
-    clear
-    python3 -c 'import pty; pty.spawn("/bin/bash")'
-    resize
-fi
+# current git branch (green) when inside a repo
+__vg() {
+    local b
+    b=$(git branch --show-current 2>/dev/null) || return
+    [ -n "$b" ] && printf ' \001\033[38;5;150m\002 %s' "$b"
+}
 
-PS1='\[\e[0;2;38;5;226m\]\$ \[\e[0;1;38;5;154m\]\u \[\e[0;2;38;5;157m\]in \[\e[0;1;38;5;208m\]\W \[\e[0;38;5;43m\]> \[\e[0m\]'
+# line 1: user@host  ~/path (branch)   line 2: ❯
+PS1='\n\[\033[1;38;5;183m\]\u\[\033[38;5;245m\]@\h \[\033[0;38;5;111m\]\w\[\033[38;5;150m\]$(__vg)\n\[\033[1;38;5;183m\]\342\235\257\[\033[0m\] '
+
+# Catppuccin-ish ls/grep colours
+export LS_COLORS='di=1;38;5;111:ln=38;5;116:so=38;5;183:pi=38;5;215:ex=1;38;5;150:bd=38;5;215:cd=38;5;215:su=38;5;211:sg=38;5;211:tw=38;5;111:ow=38;5;111:*.tar=38;5;215:*.zip=38;5;215:*.gz=38;5;215:*.jpg=38;5;183:*.png=38;5;183:*.mp4=38;5;183:*.md=38;5;189:*.sh=38;5;150'
+

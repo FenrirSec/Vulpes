@@ -29,9 +29,28 @@ chmod u+rw $HOME/.poshthemes/*.json
 chown -R vulpes:vulpes $HOME/.poshthemes
 rm $HOME/.poshthemes/themes.zip
 
-echo -e "\nNEWLINE_BEFORE_PROMPT=no\nneofetch\ncd $HOME\n" > $HOME/.bashrc
+cat > $HOME/.bashrc <<'BASHRC'
+# Vulpes terminal - Catppuccin Mocha
+cd ~
 
-echo 'eval "$(oh-my-posh --init --shell bash --config /home/vulpes/.poshthemes/aliens.omp.json)"' >> $HOME/.bashrc
+# current git branch (green) when inside a repo
+__vg() {
+    local b
+    b=$(git branch --show-current 2>/dev/null) || return
+    [ -n "$b" ] && printf ' \001\033[38;5;150m\002 %s' "$b"
+}
+
+# line 1: user@host  ~/path (branch)   line 2: ❯
+PS1='\n\[\033[1;38;5;183m\]\u\[\033[38;5;245m\]@\h \[\033[0;38;5;111m\]\w\[\033[38;5;150m\]$(__vg)\n\[\033[1;38;5;183m\]\342\235\257\[\033[0m\] '
+
+# Catppuccin-ish ls/grep colours
+export LS_COLORS='di=1;38;5;111:ln=38;5;116:so=38;5;183:pi=38;5;215:ex=1;38;5;150:bd=38;5;215:cd=38;5;215:su=38;5;211:sg=38;5;211:tw=38;5;111:ow=38;5;111:*.tar=38;5;215:*.zip=38;5;215:*.gz=38;5;215:*.jpg=38;5;183:*.png=38;5;183:*.mp4=38;5;183:*.md=38;5;189:*.sh=38;5;150'
+alias ls='ls --color=auto'
+alias ll='ls -lah'
+alias grep='grep --color=auto'
+alias ip='ip --color=auto'
+BASHRC
+chown vulpes:vulpes $HOME/.bashrc
 
 cp /etc/setup/terminal $HOME/.config/xfce4/terminal
 

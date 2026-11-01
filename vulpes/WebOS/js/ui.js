@@ -1,7 +1,6 @@
 // Panel, popovers, toasts, theme and other desktop chrome
 Vulpes.ui = (() => {
     const $ = (id) => document.getElementById(id);
-    const DEFAULT_COLOR = '#88c0d0';
 
     function storage(key, value) {
         try {
@@ -65,14 +64,46 @@ Vulpes.ui = (() => {
     function toggle(name) { isOpen(name) ? close(name) : open(name); }
 
     // -------------------------------------------------------- appearance
-    function applyTheme(theme) {
-        document.body.classList.toggle('light-theme', theme === 'light');
-        document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+    const root = document.documentElement;
+
+    function syncAccentPicker() {
+        const stored = storage('mainColor');
+        const cur = (stored || getComputedStyle(root).getPropertyValue('--primary')).trim();
+        const inp = $('input-color');
+        if (inp && /^#[0-9a-f]{6}$/i.test(cur)) inp.value = cur;
     }
 
+    function applyTheme(name) {
+        root.dataset.theme = name;
+        const sel = $('themeSelect');
+        if (sel) sel.value = name;
+        syncAccentPicker();
+    }
+
+    // empty/null accent -> fall back to the theme's own --primary
     function applyColor(color) {
-        document.body.style.setProperty('--primary', color);
-        $('input-color').value = color;
+        if (color) root.style.setProperty('--primary', color);
+        else root.style.removeProperty('--primary');
+        syncAccentPicker();
+    }
+
+    function applyBackground(value) {
+        value = (value || '').trim();
+        if (!value) root.style.removeProperty('--wallpaper');
+        else if (/^(#|rgb|hsl)/i.test(value) || (/^[a-z]+$/i.test(value) && !value.includes('/')))
+            root.style.setProperty('--wallpaper', value);            // a colour
+        else
+            root.style.setProperty('--wallpaper', `url("${value.replace(/"/g, '\\"')}")`);
+        const inp = $('bgInput');
+        if (inp && !value.startsWith('data:')) inp.value = value;
+    }
+
+    function applyCustomCss(css) {
+        let el = document.getElementById('user-css');
+        if (!el) { el = document.createElement('style'); el.id = 'user-css'; document.head.appendChild(el); }
+        el.textContent = css || '';
+        const ta = $('customCss');
+        if (ta && ta.value !== (css || '')) ta.value = css || '';
     }
 
     function applyZoom(zoom) {
@@ -133,17 +164,59 @@ Vulpes.ui = (() => {
             if (e.key === 'Escape') closeAll();
         });
 
-        document.querySelectorAll('.theme-btn').forEach(btn => btn.addEventListener('click', () => {
-            applyTheme(btn.dataset.theme);
-            storage('theme', btn.dataset.theme);
-        }));
+        $('themeSelect').addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+            storage('theme', e.target.value);
+        });
         $('input-color').addEventListener('input', (e) => {
             applyColor(e.target.value);
             storage('mainColor', e.target.value);
         });
         $('resetColor').addEventListener('click', () => {
-            applyColor(DEFAULT_COLOR);
+            applyColor(null);
             storage('mainColor', null);
+        });
+
+        // background / wallpaper
+        $('bgApply').addEventListener('click', () => {
+            const v = $('bgInput').value.trim();
+            applyBackground(v);
+            storage('wallpaper', v || null);
+        });
+        $('bgInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('bgApply').click(); });
+        $('bgClear').addEventListener('click', () => {
+            $('bgInput').value = '';
+            applyBackground('');
+            storage('wallpaper', null);
+        });
+        $('bgFile').addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const data = reader.result;
+                applyBackground(data);
+                try {
+                    localStorage.setItem('wallpaper', data);
+                } catch (err) {
+                    notify('Image is too large to save; it will reset on reload', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        });
+
+        // custom CSS
+        $('cssApply').addEventListener('click', () => {
+            const css = $('customCss').value;
+            applyCustomCss(css);
+            storage('customCss', css || null);
+            notify('Custom CSS applied');
+        });
+        $('cssClear').addEventListener('click', () => {
+            $('customCss').value = '';
+            applyCustomCss('');
+            storage('customCss', null);
         });
         $('zoomSelect').addEventListener('change', (e) => {
             applyZoom(e.target.value);
@@ -162,8 +235,10 @@ Vulpes.ui = (() => {
             location.reload();
         });
 
-        applyTheme(storage('theme') || 'dark');
-        applyColor(storage('mainColor') || DEFAULT_COLOR);
+        applyTheme(storage('theme') || 'mocha');
+        applyColor(storage('mainColor') || null);
+        applyBackground(storage('wallpaper') || '');
+        applyCustomCss(storage('customCss') || '');
         applyZoom(storage('winZoom') || '1');
         applyQuality(storage('streamQuality') || '80');
         $('statsToggle').checked = storage('showStats') === '1';

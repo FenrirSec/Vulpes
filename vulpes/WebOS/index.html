@@ -6,7 +6,7 @@
     <title>Vulpes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -62,22 +62,36 @@
         <section class="settings" id="settingsPanel" aria-label="Settings" hidden>
             <h2>Settings</h2>
             <div class="setting">
-                <span>Theme</span>
-                <div class="segmented" role="group" aria-label="Theme">
-                    <button id="dark-button" class="theme-btn active" data-theme="dark">Dark</button>
-                    <button id="light-button" class="theme-btn" data-theme="light">Light</button>
-                </div>
+                <label for="themeSelect">Theme</label>
+                <select class="field" id="themeSelect">
+                    <option value="mocha">Catppuccin Mocha</option>
+                    <option value="latte">Catppuccin Latte</option>
+                    <option value="nord">Nord</option>
+                    <option value="gruvbox">Gruvbox</option>
+                </select>
             </div>
             <div class="setting">
-                <label for="input-color">Main color</label>
+                <label for="input-color">Accent color</label>
                 <div class="color-row">
-                    <input type="color" id="input-color" value="#4a469e">
+                    <input type="color" id="input-color" value="#cba6f7">
                     <button class="link-btn" id="resetColor">Reset</button>
+                </div>
+            </div>
+            <div class="setting stack">
+                <span>Background</span>
+                <div class="row">
+                    <input class="field" id="bgInput" type="text" placeholder="Image URL or #colour" spellcheck="false">
+                    <button class="ghost-btn" id="bgApply">Set</button>
+                </div>
+                <div class="row">
+                    <label class="ghost-btn" for="bgFile">Upload image</label>
+                    <input id="bgFile" type="file" accept="image/*" hidden>
+                    <button class="ghost-btn" id="bgClear">Reset</button>
                 </div>
             </div>
             <div class="setting">
                 <label for="zoomSelect">Window zoom (DPI)</label>
-                <select class="zoom-select" id="zoomSelect">
+                <select class="field" id="zoomSelect">
                     <option value="0.5">50%</option>
                     <option value="0.6">60%</option>
                     <option value="0.7">70%</option>
@@ -94,7 +108,7 @@
             </div>
             <div class="setting">
                 <label for="qualitySelect">Stream quality</label>
-                <select class="zoom-select" id="qualitySelect">
+                <select class="field" id="qualitySelect">
                     <option value="35">Low (fast)</option>
                     <option value="60">Medium</option>
                     <option value="80">High</option>
@@ -105,7 +119,15 @@
                 <label for="statsToggle">Stream statistics</label>
                 <input type="checkbox" class="switch" id="statsToggle">
             </div>
-            <p class="setting-note">Full screen lets remote apps receive shortcuts the browser normally keeps, such as Ctrl+W and Ctrl+T. Hold Esc to leave it.</p>
+            <div class="setting stack">
+                <label for="customCss">Custom CSS</label>
+                <textarea class="field" id="customCss" spellcheck="false" placeholder=":root { --primary: #f5c2e7; }&#10;.window { border-radius: 14px; }"></textarea>
+                <div class="row">
+                    <button class="primary-btn" id="cssApply">Apply</button>
+                    <button class="ghost-btn" id="cssClear">Clear</button>
+                </div>
+            </div>
+            <p class="setting-note">Custom CSS overrides the theme. Edit the scale tokens (--sp-*, --fs-*, --ctl, --r) or any colour variable. Full screen lets remote apps receive shortcuts such as Ctrl+W and Ctrl+T; hold Esc to leave.</p>
             <div class="setting">
                 <span>Session</span>
                 <button class="link-btn" id="logoutBtn">Log out</button>
