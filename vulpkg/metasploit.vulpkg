@@ -1,0 +1,27 @@
+{
+  "name": "metasploit",
+  "version": "latest",
+  "description": "Metasploit Framework",
+  "author": "Rapid7",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "ruby",
+    "ruby-dev",
+    "ruby-bundler",
+    "build-base",
+    "libpcap-dev",
+    "libxml2-dev",
+    "libxslt-dev",
+    "libpq-dev",
+    "musl-dev",
+    "libffi-dev",
+    "zlib-dev",
+    "ncurses",
+    "git",
+    "postgresql-dev",
+    "readline-dev",
+    "sqlite-dev",
+    "yaml-dev"
+  ],
+  "install_script": "git clone --depth 1 https://github.com/rapid7/metasploit-framework.git src\ncd src\n# msfconsole runs git on its own repo for the version; allow it for any user\ngit config --system --add safe.directory /opt/vulpkg/metasploit/src\n# install gems inside the repo so the vulpes user finds them (gems are read-only\n# at runtime; the repo is chowned to vulpes below)\nbundle config set --local path vendor/bundle\nbundle install --jobs \"$(nproc)\"\nfor b in msfconsole msfvenom msfdb msfrpc msfrpcd msfdb; do\n  printf '#!/bin/bash\\ncd /opt/vulpkg/metasploit/src && exec bundle exec ./%s \"$@\"\\n' \"$b\" > /usr/local/bin/$b\n  chmod +x /usr/local/bin/$b\ndone\nchown -R vulpes:vulpes /opt/vulpkg/metasploit 2>/dev/null || true"
+}

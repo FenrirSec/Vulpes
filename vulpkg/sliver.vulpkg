@@ -1,0 +1,11 @@
+{
+  "name": "sliver",
+  "version": "latest",
+  "description": "Sliver - modern cross-platform C2 framework (BishopFox)",
+  "author": "BishopFox",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "curl"
+  ],
+  "install_script": "echo '[sliver] large download (server + client)...'\ncurl -sSfL https://sliver.sh/install | bash"
+}

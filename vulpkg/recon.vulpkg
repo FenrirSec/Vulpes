@@ -1,0 +1,9 @@
+{
+  "name": "recon",
+  "version": "latest",
+  "description": "Bundle: web/attack-surface recon suite",
+  "author": "Fenrir",
+  "requires_sudo": true,
+  "alpine_packages": [],
+  "install_script": "echo '[recon] installing: subfinder httpx dnsx naabu katana gau gobuster nuclei gowitness dalfox'\nvulpkg install subfinder || echo '[recon] subfinder failed, continuing'\nvulpkg install httpx || echo '[recon] httpx failed, continuing'\nvulpkg install dnsx || echo '[recon] dnsx failed, continuing'\nvulpkg install naabu || echo '[recon] naabu failed, continuing'\nvulpkg install katana || echo '[recon] katana failed, continuing'\nvulpkg install gau || echo '[recon] gau failed, continuing'\nvulpkg install gobuster || echo '[recon] gobuster failed, continuing'\nvulpkg install nuclei || echo '[recon] nuclei failed, continuing'\nvulpkg install gowitness || echo '[recon] gowitness failed, continuing'\nvulpkg install dalfox || echo '[recon] dalfox failed, continuing'"
+}

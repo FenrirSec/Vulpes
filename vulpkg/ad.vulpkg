@@ -1,0 +1,9 @@
+{
+  "name": "ad",
+  "version": "latest",
+  "description": "Bundle: Active Directory / internal network",
+  "author": "Fenrir",
+  "requires_sudo": true,
+  "alpine_packages": [],
+  "install_script": "echo '[ad] installing: netexec impacket bloodhound-python certipy kerbrute responder'\nvulpkg install netexec || echo '[ad] netexec failed, continuing'\nvulpkg install impacket || echo '[ad] impacket failed, continuing'\nvulpkg install bloodhound-python || echo '[ad] bloodhound-python failed, continuing'\nvulpkg install certipy || echo '[ad] certipy failed, continuing'\nvulpkg install kerbrute || echo '[ad] kerbrute failed, continuing'\nvulpkg install responder || echo '[ad] responder failed, continuing'"
+}

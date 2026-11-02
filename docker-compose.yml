@@ -1,0 +1,37 @@
+version: "3.3"
+
+services:
+
+  workstation:
+    image: vulpes:latest
+    build: ./vulpes
+    hostname: vulpes
+    environment:
+      PORT: 6080
+      PASSWORD: vulpes123
+    ports:
+      - 8002:80
+      - 2222:22
+      - 8083:8083 # Caido
+    volumes:
+      - ./Shared:/shared
+      - ./vulpkg:/var/lib/vulpkg/repo
+      - ./applications:/home/vulpes/.local/share/applications
+      - ./icons:/home/vulpes/.local/share/icons
+    # Xvfb framebuffers live in /dev/shm (about 33 MB per 4K window); Docker's default is 64 MB
+    shm_size: "1gb"
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+
+#  nginx:
+#    image: nginx:latest
+#    container_name: nginx
+#    restart: unless-stopped
+#    ports:
+#      - "8000:80"
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#      #- ./vulpes/settings.json:/etc/nginx/html/display/settings.json
+#      #- ./vulpes/settings.json:/etc/nginx/html/settings.json
+#      - ./vulpes/WebOS/:/opt/WebOS/:ro

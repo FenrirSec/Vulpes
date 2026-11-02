@@ -1,0 +1,13 @@
+{
+  "name": "sploitscan",
+  "version": "latest",
+  "description": "SploitScan - fetch CVE details, exploits (EDB/GitHub/Metasploit/Nuclei), EPSS and CISA KEV",
+  "author": "xaitax",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv"
+  ],
+  "install_script": "python3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install sploitscan\nln -sf /opt/vulpkg/sploitscan/venv/bin/sploitscan /usr/local/bin/sploitscan\ncommand -v sploitscan >/dev/null || { echo '[sploitscan] ERROR: entry point not linked'; exit 1; }\nchown -R vulpes:vulpes /opt/vulpkg/sploitscan 2>/dev/null || true"
+}

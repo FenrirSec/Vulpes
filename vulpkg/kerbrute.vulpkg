@@ -1,0 +1,11 @@
+{
+  "name": "kerbrute",
+  "version": "latest",
+  "description": "Kerberos pre-auth username/password brute-forcer",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "go"
+  ],
+  "install_script": "export GOROOT=/usr/lib/go GOBIN=/usr/local/bin GOPATH=/opt/vulpkg/.go GOFLAGS=-mod=mod GOTOOLCHAIN=auto\ngo install github.com/ropnop/kerbrute@latest"
+}

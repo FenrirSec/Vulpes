@@ -1,0 +1,12 @@
+{
+  "name": "feroxbuster",
+  "version": "latest",
+  "description": "feroxbuster - fast recursive content discovery",
+  "author": "epi052",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "curl",
+    "bash"
+  ],
+  "install_script": "curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh | bash -s -- /usr/local/bin"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "wafw00f",
+  "version": "latest",
+  "description": "wafw00f - identify and fingerprint Web Application Firewalls",
+  "author": "EnableSecurity",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv"
+  ],
+  "install_script": "python3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install wafw00f\nln -sf /opt/vulpkg/wafw00f/venv/bin/wafw00f /usr/local/bin/wafw00f\nchown -R vulpes:vulpes /opt/vulpkg/wafw00f 2>/dev/null || true"
+}

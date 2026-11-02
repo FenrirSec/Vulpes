@@ -1,0 +1,29 @@
+[
+  {
+    "id": "terminal",
+    "name": "Terminal",
+    "icon": "terminal",
+    "type": "tui",
+    "command": null,
+    "category": "system",
+    "docked": true
+  },
+  {
+    "id": "hacktricks",
+    "name": "HackTricks",
+    "icon": "hacktricks",
+    "type": "url",
+    "url": "https://book.hacktricks.wiki",
+      "category": "internet",
+      "proxy": true
+  },
+    {
+	"id": "payloadsallthethings",
+	"name": "PayloadsAllTheThings",
+	"icon": "browser",
+	"type": "url",
+	"url": "https://swisskyrepo.github.io/PayloadsAllTheThings/",
+	"category": "internet",
+	"proxy": true
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "name": "seclists",
+  "version": "latest",
+  "description": "SecLists - the pentester's wordlist collection (large download)",
+  "author": "Daniel Miessler",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git"
+  ],
+  "install_script": "echo '[seclists] cloning ~1 GB of wordlists...'\ngit clone --depth 1 https://github.com/danielmiessler/SecLists.git /usr/share/seclists"
+}

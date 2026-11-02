@@ -1,0 +1,25 @@
+{
+  "name": "villain",
+  "version": "latest",
+  "description": "Villain - C2 framework / reverse-shell handler",
+  "author": "t3l3machus",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git",
+    "python3",
+    "python3-dev",
+    "py3-netifaces",
+    "gcc",
+    "libc-dev",
+    "make",
+    "build-base",
+    "libffi-dev",
+    "openssl-dev",
+    "readline-dev",
+    "krb5-dev",
+    "linux-headers",
+    "zeromq-dev",
+    "ncurses-dev"
+  ],
+  "install_script": "set -e\ngit clone --depth 1 https://github.com/t3l3machus/Villain.git src\ncd src\n# netifaces does not build on modern Python. Use Alpine's prebuilt py3-netifaces\n# (visible through --system-site-packages) and drop it from requirements so pip\n# never tries to compile it.\npython3 -m venv --system-site-packages env || virtualenv --system-site-packages env\n./env/bin/pip install --upgrade pip wheel\nsed -i '/netifaces/d' requirements.txt\n./env/bin/pip install -r requirements.txt\n./env/bin/python -c 'import netifaces' || { echo '[villain] ERROR: netifaces not importable (is py3-netifaces installed?)'; exit 1; }\nprintf '#!/bin/sh\\nexec /opt/vulpkg/villain/src/env/bin/python3 /opt/vulpkg/villain/src/Villain.py \"$@\"\\n' > /usr/local/bin/villain\nchmod +x /usr/local/bin/villain\nchown -R vulpes:vulpes /opt/vulpkg/villain 2>/dev/null || true"
+}

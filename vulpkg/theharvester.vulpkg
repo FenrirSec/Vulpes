@@ -1,0 +1,21 @@
+{
+  "name": "theharvester",
+  "version": "latest",
+  "description": "theHarvester - OSINT e-mail, subdomain and host gathering",
+  "author": "laramies",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "git",
+    "python3",
+    "py3-pip",
+    "py3-virtualenv",
+    "python3-dev",
+    "gcc",
+    "musl-dev",
+    "libffi-dev",
+    "openssl-dev",
+    "libxml2-dev",
+    "libxslt-dev"
+  ],
+  "install_script": "git clone --depth 1 --branch 4.5.1 https://github.com/laramies/theHarvester.git src\ncd src\npython3 -m venv venv || virtualenv venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install .\nln -sf /opt/vulpkg/theharvester/src/venv/bin/theHarvester /usr/local/bin/theHarvester\nchown -R vulpes:vulpes /opt/vulpkg/theharvester 2>/dev/null || true"
+}

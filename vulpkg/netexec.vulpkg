@@ -1,0 +1,22 @@
+{
+  "name": "netexec",
+  "version": "latest",
+  "description": "NetExec (nxc) - the maintained CrackMapExec successor",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv",
+    "py3-netifaces",
+    "gcc",
+    "musl-dev",
+    "python3-dev",
+    "libffi-dev",
+    "openssl-dev",
+    "git",
+    "rust",
+    "cargo"
+  ],
+  "install_script": "# netifaces has no source build on modern Python; use Alpine's py3-netifaces\n# (visible through --system-site-packages) so pip never tries to compile it.\npython3 -m venv --system-site-packages venv || virtualenv --system-site-packages venv\n./venv/bin/pip install --upgrade pip wheel\n./venv/bin/pip install git+https://github.com/Pennyw0rth/NetExec\nln -sf /opt/vulpkg/netexec/venv/bin/nxc /usr/local/bin/nxc\nln -sf /opt/vulpkg/netexec/venv/bin/netexec /usr/local/bin/netexec\nchown -R vulpes:vulpes /opt/vulpkg/netexec 2>/dev/null || true"
+}

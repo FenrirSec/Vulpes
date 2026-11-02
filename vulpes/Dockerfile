@@ -1,62 +1,73 @@
-FROM alpine:3.20.3
+FROM frolvlad/alpine-glibc:alpine-3.22_glibc-2.42
 
 # Installing required packages for minimal functioning
-RUN apk add --no-cache curl sudo x11vnc tigervnc xvfb dbus-x11 \
-    xfce4 xfce4-terminal xfce4-screensaver bash screen python3 py3-pip pwgen websockify gcompat bind-tools
-#RUN pip install websockify
-RUN apk add --no-cache nerd-fonts --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
+RUN apk add --no-cache curl sudo xvfb dbus-x11 xfce4 lxterminal bash screen python3 python3-dev py3-pip pwgen websockify bind-tools xfce4-terminal openssh shadow wireshark nginx
 
-# Copying files to the container
+# Copying scripts to the container
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 COPY setup /etc/setup
-COPY themes.zip /etc/themes.zip
-RUN cd /etc/ && unzip themes.zip
-RUN cp /etc/setup/xinitrc /etc/xinitrc
-
-## Xfce4 logout deactivation
-RUN cp /etc/setup/xfce4-session-logout.desktop /usr/share/applications/
+#RUN cp /etc/setup/xinitrc /etc/xinitrc
 
 ## User creation
 RUN addgroup -S vulpes
 RUN adduser -S vulpes -G vulpes -s /bin/bash
-RUN echo '%wheel ALL=(ALL) ALL' > /etc/sudoers.d/wheel
+RUN usermod -aG wireshark vulpes
+RUN echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel
 RUN adduser vulpes wheel
 RUN echo "vulpes:vulpes" | chpasswd
 
-## Permission and default home management
-RUN cp /etc/setup/xinitrc /home/vulpes/.xinitrc && cp /etc/setup/xinitrc /root/.xinitrc
-#RUN cp /etc/setup/xinitscript.sh /etc/X11/xinit/xinitrc.d/
-
-## Autorun setup
-RUN cp /etc/setup/setup.desktop /etc/xdg/autostart
-
-## Final setup steps
-RUN chown -R "vulpes:vulpes" "/home/vulpes"
+# Copying config files
+COPY setup/bashrc /home/vulpes/.bashrc
 
 # Installing additional packages
 RUN apk add $(cat /etc/setup/.defaultpackages)
 RUN curl -s https://ohmyposh.dev/install.sh | bash -s
 RUN cp /root/.local/bin/oh-my-posh /bin/
+#RUN oh-my-posh font install 0xProto
 
-# Removing broken power manager
-RUN sed -i 's/<property name="plugin-9" type="string" value="power-manager-plugin"\/>//g' /etc/xdg/xfce4/panel/default.xml
+## User home permissions
+RUN chown -R "vulpes:vulpes" "/home/vulpes"
 
+# WebOS Setup
+RUN apk add --no-cache xclip musl-dev openssl-dev openssl py3-virtualenv git
 
-# Installing fonts
-RUN wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/AnonymousPro.zip && unzip AnonymousPro.zip -d /usr/share/fonts/Anonymice/ && rm AnonymousPro.zip
-RUN wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/Hack.zip && unzip Hack.zip -d /usr/share/fonts/Hack && rm Hack.zip
+RUN ln -s /home/vulpes/.env/bin/vulpkg /usr/bin/vulpkg
 
-# Updating background
-RUN rm -fr /usr/share/backgrounds/xfce/*
-COPY ./setup/wallpaper.png /usr/share/backgrounds/xfce/vulpes.png
+#RUN chmod -R 777 /var/lib/vulpkg/ && chmod -R 777 /opt/vulpkg/
 
-# In case run.sh has been edited on windows
-RUN dos2unix /run.sh && dos2unix /etc/setup/postinstall.sh && dos2unix /etc/setup/xinitscript.sh && dos2unix /etc/setup/postinstall.sh
+# SSHD setup
+RUN ssh-keygen -A
 
-COPY scripts /setup_scripts/
-RUN mv /setup_scripts/install.sh /usr/bin/install && chmod +x /usr/bin/install
+# NGINX setup
+COPY nginx.conf /etc/nginx/nginx.conf
 
-EXPOSE 5900
+# I would like to do this as vulpes but it is not possible with docker as of today, COPY is made as root
+COPY WebOS /opt/webos
+
+COPY xterm_rs /opt/webos/xterm_rs
+
+RUN chown -R vulpes:vulpes /opt/webos
+
+USER vulpes
+
+# Setting up bash as default shell in tmux
+RUN echo -e 'set -g default-terminal "screen-256color"\nset-option -g default-shell /bin/bash' >> ~/.tmux.conf
+
+# Setting up global user Python env
+# WebX11 is vendored in ./webx11 (fbdir capture, dirty-rect streaming, stuck-key fixes)
+# VulPKG is vendored in ./vulpkg-src (install requires root; list/available do not)
+COPY --chown=vulpes:vulpes webx11 /opt/webx11-src
+COPY --chown=vulpes:vulpes vulpkg-src /opt/vulpkg-src
+RUN virtualenv $HOME/.env  && source $HOME/.env/bin/activate && pip install websockets Pillow python-xlib /opt/webx11-src /opt/vulpkg-src fastapi uvicorn httpx
+
+# Adding .profile file
+COPY profile ~/.profile
+
+# Vulpkg binary setup (tools install into /usr/local/bin, already on the login PATH)
+RUN mkdir ~/.local/bin && echo -e "\nPATH=$PATH:$HOME/.local/bin/:/shared/bin/:$HOME/.env/bin/:/usr/local/bin" >> ~/.bashrc
+RUN ln -sf $HOME/.env/bin/vulpkg ~/.local/bin/vulpkg
+
+WORKDIR /home/vulpes/
 
 CMD ["/run.sh"]

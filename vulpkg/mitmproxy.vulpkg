@@ -1,0 +1,11 @@
+{
+  "name": "mitmproxy",
+  "version": "latest",
+  "description": "mitmproxy - interactive TLS-capable intercepting proxy",
+  "author": "upstream",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "mitmproxy"
+  ],
+  "install_script": "# Alpine ships a prebuilt mitmproxy (the pip build fails: mitmproxy-rs is a\n# Rust extension with no musl wheel). The apk provides mitmproxy/mitmdump/mitmweb.\ncommand -v mitmproxy >/dev/null || { echo '[mitmproxy] ERROR: apk did not provide the mitmproxy binary'; exit 1; }\nmitmdump --version | head -1"
+}

@@ -1,0 +1,7 @@
+- Fix proxy pour qu'il réecrive bien tous les liens, la on a encore du chargement qui ne passe pas par le proxy
+- Arrêter d'utiliser tmux automatiquement, fixer le .profile pour forcer le load du bashrc et fixer la "perte" des fenêtres (des terms surtout, les windows on l'air bien conservées)
+- Fix single et double quotes
+- Fix probleme de clavier en FR Mac OS
+- Faire une version "slim" de la distro et une version avec full outils
+- Fix scripts d'install
+

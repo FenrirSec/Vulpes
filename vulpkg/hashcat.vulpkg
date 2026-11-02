@@ -1,0 +1,12 @@
+{
+  "name": "hashcat",
+  "version": "6.2.6",
+  "description": "hashcat - advanced password recovery",
+  "author": "hashcat",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "curl",
+    "p7zip"
+  ],
+  "install_script": "# hashcat is not packaged for Alpine and does not build cleanly against musl.\n# The official release ships a prebuilt binary (glibc), which runs on the\n# alpine-glibc base image. Install that.\ncurl -fsSL https://hashcat.net/files/hashcat-6.2.6.7z -o hashcat.7z\n7z x -y hashcat.7z >/dev/null\nmv hashcat-6.2.6/* .\nrmdir hashcat-6.2.6\nrm -f hashcat.7z\ntest -f hashcat.bin || { echo '[hashcat] ERROR: hashcat.bin missing after extract'; exit 1; }\nchmod +x hashcat.bin\n# hashcat locates its modules/OpenCL/hcstat relative to the binary, so run it in place\nprintf '#!/bin/sh\\nexec /opt/vulpkg/hashcat/hashcat.bin \"$@\"\\n' > /usr/local/bin/hashcat\nchmod +x /usr/local/bin/hashcat\nchown -R vulpes:vulpes /opt/vulpkg/hashcat 2>/dev/null || true\necho '[hashcat] installed official 6.2.6 binary'"
+}

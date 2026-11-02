@@ -1,0 +1,11 @@
+{
+  "name": "hydra",
+  "version": "latest",
+  "description": "hydra - network login brute-forcer",
+  "author": "vanhauser-thc",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "hydra"
+  ],
+  "install_script": "hydra -h >/dev/null 2>&1 || true"
+}

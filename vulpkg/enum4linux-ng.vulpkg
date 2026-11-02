@@ -1,0 +1,22 @@
+{
+  "name": "enum4linux-ng",
+  "version": "latest",
+  "description": "enum4linux-ng - Windows/Samba enumeration",
+  "author": "cddmp",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "python3",
+    "py3-pip",
+    "py3-virtualenv",
+    "gcc",
+    "musl-dev",
+    "python3-dev",
+    "libffi-dev",
+    "openssl-dev",
+    "git",
+    "samba-common",
+    "samba-client",
+    "samba-common-tools"
+  ],
+  "install_script": "git clone --depth 1 https://github.com/cddmp/enum4linux-ng.git src\ncd src\npython3 -m venv env || virtualenv env\n./env/bin/pip install -r requirements.txt\nprintf '#!/bin/bash\\nexec /opt/vulpkg/enum4linux-ng/src/env/bin/python3 /opt/vulpkg/enum4linux-ng/src/enum4linux-ng.py \"$@\"\\n' > /usr/local/bin/enum4linux-ng\nchmod +x /usr/local/bin/enum4linux-ng\nchown -R vulpes:vulpes /opt/vulpkg/enum4linux-ng 2>/dev/null || true"
+}
