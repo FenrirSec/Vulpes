@@ -288,6 +288,13 @@ Vulpes.wm = (() => {
                 const label = document.createElement('span');
                 label.textContent = win.name;
                 btn.appendChild(label);
+                // close chip (used on mobile where there is no titlebar)
+                const close = document.createElement('span');
+                close.className = 'task-close';
+                close.textContent = '×';
+                close.title = 'Close';
+                close.addEventListener('click', (e) => { e.stopPropagation(); win.close(); });
+                btn.appendChild(close);
                 btn.addEventListener('click', () => {
                     if (win === active && !win.minimized) win.minimize();
                     else focus(win);

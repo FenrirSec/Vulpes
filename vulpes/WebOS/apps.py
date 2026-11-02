@@ -392,6 +392,13 @@ async def shutdown_event():
 async def root():
     return {"message": "WebOS Applications API", "version": "3.0"}
 
+@app.get("/authz")
+async def authz(_auth: bool = Depends(verify_session)):
+    """Lightweight check for nginx auth_request: 204 when the session cookie
+    (or Basic header) is valid, 403 otherwise. Guards the raw backends
+    (terminals, X11 streams, /port apps) that nginx proxies directly."""
+    return Response(status_code=204)
+
 @app.get("/session")
 async def get_session(response: Response, username: str = Depends(verify_credentials)):
     """Get global session windows (and (re)issue the session cookie)"""

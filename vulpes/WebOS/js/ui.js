@@ -89,11 +89,14 @@ Vulpes.ui = (() => {
 
     function applyBackground(value) {
         value = (value || '').trim();
-        if (!value) root.style.removeProperty('--wallpaper');
-        else if (/^(#|rgb|hsl)/i.test(value) || (/^[a-z]+$/i.test(value) && !value.includes('/')))
-            root.style.setProperty('--wallpaper', value);            // a colour
-        else
-            root.style.setProperty('--wallpaper', `url("${value.replace(/"/g, '\\"')}")`);
+        if (!value) { root.style.removeProperty('--wallpaper'); delete root.dataset.bg; }  // back to themed gradient + wave
+        else {
+            if (/^(#|rgb|hsl)/i.test(value) || (/^[a-z]+$/i.test(value) && !value.includes('/')))
+                root.style.setProperty('--wallpaper', value);        // a colour
+            else
+                root.style.setProperty('--wallpaper', `url("${value.replace(/"/g, '\\"')}")`);
+            root.dataset.bg = '1';                                   // hide the default wave texture
+        }
         const inp = $('bgInput');
         if (inp && !value.startsWith('data:')) inp.value = value;
     }
