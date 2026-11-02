@@ -1,6 +1,7 @@
 # Vulpes 🦊
 
 All-in-one Docker-based workstation with hacking tools for Pentesting and offsec Labs, maintained by [@Fenrir.pro](https://github.com/fenrirsec).
+Demo available **[here](https://fenrirsec.github.io/Vulpes/)**. 
 
 ![logo](./docs/banner.png)
 
@@ -15,7 +16,7 @@ The terminals are using [xterm.rs](https://term.hack.courses/), a Rust rewrite o
 
 Want to try the look and feel first? 
 There is a **static, backend-free demo**: 
-**[try it live here](https://fenrirsec.github.io/Vulpes/)**. 
+**[TRY IT LIVE](https://fenrirsec.github.io/Vulpes/)**. 
 
 The terminal takes a handful of (simulated) commands (`help`, `ls`, `nmap ...`, `vulpkg list`), the web tools
 load for real, and the GUI apps explain how they stream in the full version. Nothing
