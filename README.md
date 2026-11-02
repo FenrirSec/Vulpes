@@ -6,9 +6,22 @@ All-in-one Docker-based workstation with hacking tools for Pentesting and offsec
 
 Based on **Alpine Linux**, Vulpes is clutter-free, lightweight, and perfect for penetration testing, local training, workshops, and online classes on [hack.courses](https://hack.courses).
 
-## Status and disclaimer ⚠️
+## Web-Based
 
-Vulpes is a **work in progress and is not production ready**. It is a pentest WebOS, not a hardened, 100% secure operating system, exactly like most other pentest distributions (Kali, Parrot, and friends): the tooling it ships is offensive by nature and the desktop is built for convenience, not for standing on the open internet. At Fenrir.pro we run it on **closed, isolated environments that are not exposed to the WAN**, and we strongly advise you to do the same. It comes with **no warranty** of any kind, express or implied. Use it at your own risk.
+Vulpes is a fully integrated web-based operating system, you can run it on any headless machine and access it from your laptop, smartphone, from *anywhere using HTTPS. 
+It runs in a docker container, a back-end handles your Linux environment, while the front-end shows you the windows and your terminal in the smoothest way we could.
+
+The terminals are using [xterm.rs](https://term.hack.courses/), a Rust rewrite of xterm.js's back-end and for the windows we are running on a fork of [WebX11](https://github.com/lp1dev/WebX11/) with optimizations that will be merged soon into the main repo.
+
+Want to try the look and feel first? 
+There is a **static, backend-free demo**: 
+**[try it live here](https://fenrirsec.github.io/Vulpes/)**. 
+
+The terminal takes a handful of (simulated) commands (`help`, `ls`, `nmap ...`, `vulpkg list`), the web tools
+load for real, and the GUI apps explain how they stream in the full version. Nothing
+talks to a server.
+
+\* Please read the **disclaimer** below first.
 
 ## Why? 🤔
 
@@ -44,8 +57,12 @@ Credentials come from the `PASSWORD` environment variable in `docker-compose.yml
 | `8083` | `8083` | Caido |
 
 > **Change the default `PASSWORD`** in `docker-compose.yml` before running Vulpes
-> anywhere, and re-read the disclaimer above: keep it on a closed, isolated network,
-> never exposed to the WAN.
+> anywhere, and read the disclaimer under this section: keep it on a closed, isolated network,
+> never publicly exposed to the Internet.
+
+## Status and disclaimer ⚠️
+
+Vulpes is a **work in progress and is not production ready**. It is a pentest WebOS, not a hardened, 100% secure operating system, exactly like most other pentest distributions (Kali, Parrot, and friends): the tooling it ships is offensive by nature and the desktop is built for convenience, not for standing on the open internet. At Fenrir.pro we run it on **closed, isolated environments that are not exposed to the WAN**, and we strongly advise you to do the same. It comes with **no warranty** of any kind, express or implied. Use it at your own risk.
 
 ## Desktop tips 🖥️
 
@@ -68,54 +85,6 @@ Credentials come from the `PASSWORD` environment variable in `docker-compose.yml
 | `lossless_refresh_ms` | When the screen is idle this long, JPEG areas are re-sent lossless |
 
 Framebuffers live in `/dev/shm`, which is why `docker-compose.yml` sets `shm_size`.
-
-## Screenshots 📸
-
-The desktop, with a terminal running and the themed wave background:
-
-![Vulpes desktop with a terminal window](./docs/desktop.png)
-
-The application launcher and the settings panel (themes, accent colour, wallpaper, zoom and stream quality):
-
-![Application launcher](./docs/launcher.png)
-![Settings panel](./docs/settings.png)
-
-On a phone, apps go full screen and a bottom switcher moves between them:
-
-![Mobile layout](./docs/mobile.png)
-
-Want to try the look and feel first? There is a **static, backend-free demo**:
-**[try it live here](https://fenrirsec.github.io/vulpes/)** (or open
-[`docs/index.html`](./docs/index.html) locally in any browser). The terminal takes a
-handful of faked commands (`help`, `ls`, `nmap ...`, `vulpkg list`), the web tools
-load for real, and the GUI apps explain how they stream in the full version. Nothing
-talks to a server.
-
-## Desktop features ✨
-
-- **X11 app passthrough**: every graphical tool runs on a virtual X display inside the
-  container and is streamed into a browser window over WebX11, fully interactive
-  (mouse, keyboard and clipboard), with no VNC client to install.
-- **Fully interactive, TTY-accurate terminal**: a real PTY streamed to the browser
-  (not a half-emulated shell), with proper resize, colours, control sequences and a
-  Catppuccin prompt, plus multiple tabs per window.
-- **54 tools, one command each**: install any of 54 vulpkg packages and bundles with
-  a single `vulpkg install <name>`.
-- **Theming**: four built-in themes (Catppuccin Mocha, Latte, Nord, Gruvbox), an
-  accent-colour picker, and a custom-CSS box so you can restyle anything. Sizes,
-  padding and radii come from a small set of reused design tokens, so the whole
-  desktop stays consistent.
-- **Backgrounds**: pick a solid colour, paste an image URL, or upload a file. With
-  no wallpaper set you get a themed gradient with a soft wave texture.
-- **Per-window zoom / DPI**: scale app windows below or above 100% from Settings,
-  handy on small or very high-resolution screens.
-- **Stream quality**: trade sharpness for bandwidth on the fly; terminals re-fit and
-  streamed apps reflow to the new scale.
-- **Mobile layout**: on phones, apps run full screen with no title bar and a bottom
-  app switcher for jumping between them.
-- **Authenticated backends**: every backend route (the proxy, the WebX11 HTTP/WS
-  endpoints, the terminal socket and the per-port apps) is gated behind the session
-  cookie via nginx `auth_request`; only the login page is public.
 
 ## Current Goals 🎯
 
@@ -190,5 +159,46 @@ format).
 
 Run `vulpkg available` on the box for the authoritative, up-to-date set (54 packages
 and bundles today).
+
+## Screenshots 📸
+
+The desktop, with a terminal running and the themed wave background:
+
+![Vulpes desktop with a terminal window](./docs/desktop.png)
+
+The application launcher and the settings panel (themes, accent colour, wallpaper, zoom and stream quality):
+
+![Application launcher](./docs/launcher.png)
+![Settings panel](./docs/settings.png)
+
+On a phone, apps go full screen and a bottom switcher moves between them:
+
+![Mobile layout](./docs/mobile.png)
+
+## Desktop features ✨
+
+- **X11 app passthrough**: every graphical tool runs on a virtual X display inside the
+  container and is streamed into a browser window over WebX11, fully interactive
+  (mouse, keyboard and clipboard), with no VNC client to install.
+- **Fully interactive, TTY-accurate terminal**: a real PTY streamed to the browser
+  (not a half-emulated shell), with proper resize, colours, control sequences and a
+  Catppuccin prompt, plus multiple tabs per window.
+- **54 tools, one command each**: install any of 54 vulpkg packages and bundles with
+  a single `vulpkg install <name>`.
+- **Theming**: four built-in themes (Catppuccin Mocha, Latte, Nord, Gruvbox), an
+  accent-colour picker, and a custom-CSS box so you can restyle anything. Sizes,
+  padding and radii come from a small set of reused design tokens, so the whole
+  desktop stays consistent.
+- **Backgrounds**: pick a solid colour, paste an image URL, or upload a file. With
+  no wallpaper set you get a themed gradient with a soft wave texture.
+- **Per-window zoom / DPI**: scale app windows below or above 100% from Settings,
+  handy on small or very high-resolution screens.
+- **Stream quality**: trade sharpness for bandwidth on the fly; terminals re-fit and
+  streamed apps reflow to the new scale.
+- **Mobile layout**: on phones, apps run full screen with no title bar and a bottom
+  app switcher for jumping between them.
+- **Authenticated backends**: every backend route (the proxy, the WebX11 HTTP/WS
+  endpoints, the terminal socket and the per-port apps) is gated behind the session
+  cookie via nginx `auth_request`; only the login page is public.
 
 Dive in and hack away! 🚀
