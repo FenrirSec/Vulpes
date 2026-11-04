@@ -84,12 +84,17 @@ On a phone, apps go full screen and a bottom switcher moves between them:
 
 ![Mobile layout](./docs/mobile.png)
 
-Want to try the look and feel first? There is a **static, backend-free demo**:
+Want to try the look and feel first? There is a **local-only, backend-free demo**:
 **[try it live here](https://fenrirsec.github.io/vulpes/)** (or open
-[`docs/index.html`](./docs/index.html) locally in any browser). The terminal takes a
-handful of faked commands (`help`, `ls`, `nmap ...`, `vulpkg list`), the web tools
-load for real, and the GUI apps explain how they stream in the full version. Nothing
-talks to a server.
+[`docs/index.html`](./docs/index.html) locally in any browser). The terminal is a
+**real BusyBox Linux booted in your browser** with [v86](https://github.com/copy/v86)
+(WebAssembly), so `ls`, `uname -a`, `vi` and friends actually run. It also ships a set
+of **real, client-side tools**: a localhost port scanner, a reverse-shell generator, a
+JWT inspector (decode + HMAC verify), a browser-fingerprint/leak panel, and a
+Postman-style HTTP client. The web tools load for real, and the GUI apps explain how
+they stream in the full version. Nothing talks to a server: the Linux VM has no network
+and everything runs on your machine (first load fetches ~12&nbsp;MB of WASM + kernel,
+then it is fully offline).
 
 ## Desktop features ✨
 

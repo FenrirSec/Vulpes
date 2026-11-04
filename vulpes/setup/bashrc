@@ -95,13 +95,14 @@ if [ -x /usr/bin/dircolors ]; then
     alias diff='diff --color=auto'
     alias ip='ip --color=auto'
 
-    export LESS_TERMCAP_mb=$'\E[1;31m'     # begin blink
-    export LESS_TERMCAP_md=$'\E[1;36m'     # begin bold
-    export LESS_TERMCAP_me=$'\E[0m'        # reset bold/blink
-    export LESS_TERMCAP_so=$'\E[01;33m'    # begin reverse video
-    export LESS_TERMCAP_se=$'\E[0m'        # reset reverse video
-    export LESS_TERMCAP_us=$'\E[1;32m'     # begin underline
-    export LESS_TERMCAP_ue=$'\E[0m'        # reset underline
+    # Catppuccin Mocha palette for less / man pages
+    export LESS_TERMCAP_mb=$'\E[1;38;5;211m'          # begin blink      (red)
+    export LESS_TERMCAP_md=$'\E[1;38;5;111m'          # begin bold       (blue)
+    export LESS_TERMCAP_me=$'\E[0m'                   # reset bold/blink
+    export LESS_TERMCAP_so=$'\E[0;38;5;223;48;5;237m' # begin standout   (yellow on surface)
+    export LESS_TERMCAP_se=$'\E[0m'                   # reset standout
+    export LESS_TERMCAP_us=$'\E[1;38;5;150m'          # begin underline  (green)
+    export LESS_TERMCAP_ue=$'\E[0m'                   # reset underline
 fi
 
 # some more ls aliases
@@ -131,14 +132,17 @@ fi
 
 cd;
 
-# if running inside xterm_rs in non-interactive we make the shell fully interactive with python
-# This is a patch, not supposed to be a long-term fix. But we'll see...
+# --- Catppuccin Mocha prompt (matches the Vulpes theme) ----------------------
+# current git branch, shown in green only when inside a repository
+__vulpes_git() {
+    local b
+    b=$(git symbolic-ref --short HEAD 2>/dev/null) || b=$(git rev-parse --short HEAD 2>/dev/null) || return
+    printf ' (%s)' "$b"
+}
+#     user: bold mauve | @host: grey | path: blue | git: green | ❯: bold mauve
+PS1='\n\[\e[1;38;5;183m\]\u\[\e[0;38;5;245m\]@\h \[\e[0;38;5;111m\]\w\[\e[0;38;5;150m\]$(__vulpes_git)\[\e[0m\]\n\[\e[1;38;5;183m\]\342\235\257\[\e[0m\] '
 
-if [[ -z "${INTERACTIVE}" ]];then
-    export INTERACTIVE=1
-    clear
-    python3 -c 'import pty; pty.spawn("/bin/bash")'
-    resize
+# Vulpes banner (neofetch-style) on each new interactive terminal
+if [[ $- == *i* ]] && command -v vulpes-neofetch >/dev/null 2>&1; then
+    vulpes-neofetch
 fi
-
-PS1='\[\e[0;2;38;5;226m\]\$ \[\e[0;1;38;5;154m\]\u \[\e[0;2;38;5;157m\]in \[\e[0;1;38;5;208m\]\W \[\e[0;38;5;43m\]> \[\e[0m\]'
