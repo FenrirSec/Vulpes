@@ -316,6 +316,45 @@ class SingleWindowDisplay:
             self.monitor_display.sync()
         except Exception as e:
             print(f"apply_target_size error: {e}")
+        self.ensure_app_focus()
+
+    def ensure_app_focus(self):
+        """Pin the X input focus to the app's top-level window.
+
+        No window manager runs on this display, so X stays in PointerRoot mode
+        and the input focus follows the pointer. When the pointer moves onto an
+        app's own menu / popup (an override-redirect window), the app's main
+        window gets a FocusOut, and toolkits roll the popup back up on focus
+        loss -- most visibly Firefox, whose hamburger / address-bar menus close
+        the instant the mouse moves over them. Giving the focus to the window
+        (what a WM would do) takes the server out of PointerRoot mode, so motion
+        no longer changes focus and popups stay open. Runs on the capture thread.
+
+        Idempotent: it acts only while the focus is unset / follows the pointer
+        (or is the bare root). Once the focus is pinned to a real window it stays
+        there, so this becomes a no-op, and it never focuses an override-redirect
+        popup, so an open menu is never disturbed.
+        """
+        try:
+            root = self.monitor_display.screen().root
+            focus = self.monitor_display.get_input_focus().focus
+            focus_id = getattr(focus, 'id', focus)  # Window -> id, else the int constant
+            if focus_id not in (X.NONE, X.PointerRoot, root.id):
+                return
+            for win in root.query_tree().children:
+                try:
+                    attrs = win.get_attributes()
+                    if attrs.override_redirect or attrs.map_state != X.IsViewable:
+                        continue
+                    geo = win.get_geometry()
+                    if geo.width > 1 and geo.height > 1:
+                        win.set_input_focus(X.RevertToParent, X.CurrentTime)
+                        self.monitor_display.sync()
+                        return
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"ensure_app_focus error: {e}")
 
     def enforce_layout(self):
         """Re-apply the target size when a window changed or just after a

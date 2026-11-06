@@ -1,0 +1,15 @@
+{
+  "name": "burpsuite",
+  "version": "2024.10.3",
+  "description": "Burp Suite Community Edition - Web security testing toolkit",
+  "author": "PortSwigger",
+  "requires_sudo": true,
+  "alpine_packages": [
+    "openjdk21-jre",
+    "wget"
+  ],
+  "install_script": "wget 'https://portswigger-cdn.net/burp/releases/download?product=community&version=2024.10.3&type=Jar' -O burp.jar",
+  "files": {
+    "burp.sh": "#!/bin/bash\njava -jar $PWD/burp.jar \"$@\""
+  }
+}
