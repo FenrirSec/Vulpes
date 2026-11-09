@@ -6,6 +6,8 @@ All-in-one Docker-based workstation with hacking tools for Pentesting and offsec
 
 Based on **Alpine Linux**, Vulpes is clutter-free, lightweight, and perfect for penetration testing, local training, workshops, and online classes on [hack.courses](https://hack.courses).
 
+> 🚀 **Live demo:** try Vulpes right in your browser, no install required - **[fenrirsec.github.io/Vulpes](https://fenrirsec.github.io/Vulpes/)**. It is fully client-side (the terminal is a real Linux booted in your browser with WebAssembly), so nothing is sent to a server.
+
 ## Status and disclaimer ⚠️
 
 Vulpes is a **work in progress and is not production ready**. It is a pentest WebOS, not a hardened, 100% secure operating system, exactly like most other pentest distributions (Kali, Parrot, and friends): the tooling it ships is offensive by nature and the desktop is built for convenience, not for standing on the open internet. At Fenrir.pro we run it on **closed, isolated environments that are not exposed to the WAN**, and we strongly advise you to do the same. It comes with **no warranty** of any kind, express or implied. Use it at your own risk.
@@ -85,7 +87,7 @@ On a phone, apps go full screen and a bottom switcher moves between them:
 ![Mobile layout](./docs/mobile.png)
 
 Want to try the look and feel first? There is a **local-only, backend-free demo**:
-**[try it live here](https://fenrirsec.github.io/vulpes/)** (or open
+**[try it live here](https://fenrirsec.github.io/Vulpes/)** (or open
 [`docs/index.html`](./docs/index.html) locally in any browser). The terminal is a
 **real BusyBox Linux booted in your browser** with [v86](https://github.com/copy/v86)
 (WebAssembly), so `ls`, `uname -a`, `vi` and friends actually run. It also ships a set
