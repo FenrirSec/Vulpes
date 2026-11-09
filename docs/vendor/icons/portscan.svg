@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Port Scanner">
+  <defs>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#cba6f7" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#94e2d5" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="24" cy="24" r="21" fill="#181825"/>
+  <g fill="none" stroke="#45475a" stroke-width="1.6">
+    <circle cx="24" cy="24" r="17"/>
+    <circle cx="24" cy="24" r="11"/>
+    <circle cx="24" cy="24" r="5"/>
+  </g>
+  <path d="M24 24 L24 3 A21 21 0 0 1 41.8 13.5 Z" fill="url(#sweep)"/>
+  <line x1="24" y1="24" x2="24" y2="3" stroke="#cba6f7" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="33" cy="15" r="2.6" fill="#a6e3a1"/>
+  <circle cx="24" cy="24" r="2.2" fill="#cba6f7"/>
+</svg>
