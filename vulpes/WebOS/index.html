@@ -3,147 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Vulpes</title>
+    <title>Vulpes Desktop</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-        <symbol id="i-min" viewBox="0 0 16 16"><path d="M3.5 8.5h9" /></symbol>
-        <symbol id="i-max" viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" /></symbol>
-        <symbol id="i-restore" viewBox="0 0 16 16"><rect x="3.5" y="5.5" width="7" height="7" rx="1.5" /><path d="M6 3.5h5a1.5 1.5 0 0 1 1.5 1.5v5" /></symbol>
-        <symbol id="i-close" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /></symbol>
-        <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4" height="4" rx="1" /><rect x="9.5" y="2.5" width="4" height="4" rx="1" /><rect x="2.5" y="9.5" width="4" height="4" rx="1" /><rect x="9.5" y="9.5" width="4" height="4" rx="1" /></symbol>
-        <symbol id="i-full" viewBox="0 0 16 16"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" /></symbol>
-        <symbol id="i-unfull" viewBox="0 0 16 16"><path d="M6 2.5V6H2.5M13.5 6H10V2.5M10 13.5V10h3.5M2.5 10H6v3.5" /></symbol>
-        <symbol id="i-gear" viewBox="0 0 16 16"><path d="M2.5 4.5h4M9.5 4.5h4M2.5 11.5h7M12.5 11.5h1" /><circle cx="8" cy="4.5" r="1.5" /><circle cx="11" cy="11.5" r="1.5" /></symbol>
-        <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5l3 3" /></symbol>
-    </svg>
+    <div class="desktop">
+        <!-- Mobile Swipe Area for App Switcher -->
+        <div class="mobile-swipe-area" id="mobileSwipeArea"></div>
+        
+        <!-- Scroll Elements -->
+        <div class="right-edge-scroll" id="rightEdgeScroll"></div>
+        <div class="mobile-scroll-hint" id="mobileScrollHint">Scroll</div>
 
-    <div class="desktop" id="desktop">
-        <header class="panel" id="panel">
-            <div class="panel-start">
-                <button class="brand" id="appsBtn" title="Applications" aria-haspopup="true" aria-expanded="false">
-                    <svg class="ico"><use href="#i-grid" /></svg>
-                    <span>Vulpes</span>
+        <!-- Notifications Bar -->
+        <div class="notifications-bar" id="notificationsBar"></div>
+
+        <!-- Mobile App Switcher -->
+        <div class="mobile-app-switcher" id="mobileAppSwitcher">
+            <div class="mobile-app-switcher-header">
+                <div class="mobile-app-switcher-title">Running Apps</div>
+                <button class="mobile-app-switcher-close" id="mobileAppSwitcherClose">×</button>
+            </div>
+            <div class="mobile-apps-grid"></div>
+        </div>
+
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-logo">Vulpes</div>
+                <button class="topbar-btn" id="appsBtn" title="Applications">
+                    <div class="icon-grid">
+                        <span></span><span></span><span></span>
+                        <span></span><span></span><span></span>
+                        <span></span><span></span><span></span>
+                    </div>
                 </button>
-                <nav class="pinned" id="dock" aria-label="Pinned applications"></nav>
-            </div>
-            <nav class="tasks" id="tasks" aria-label="Open windows"></nav>
-            <div class="panel-end">
-                <button class="panel-btn" id="fullscreenBtn" title="Full screen (lets apps receive Ctrl+W, Ctrl+T, Esc…)">
-                    <svg class="ico"><use href="#i-full" /></svg>
+                <button class="topbar-btn" id="windowsBtn" title="Windows">
+                    <div class="icon-windows">☰</div>
                 </button>
-                <button class="panel-btn" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
-                    <svg class="ico"><use href="#i-gear" /></svg>
+                <button class="topbar-btn" id="settingsBtn" title="Settings">
+                    <div class="icon-gear"></div>
                 </button>
-                <time class="clock" id="clock">--:--</time>
             </div>
-        </header>
+            <div class="topbar-right">
+                <div class="topbar-time" id="clock">--:--</div>
+            </div>
+        </div>
 
-        <main class="workspace" id="workspace">
-            <div class="snap-preview" id="snapPreview"></div>
-            <div class="empty-hint" id="emptyHint">
-                <p>No windows open</p>
-                <button class="link-btn" id="emptyLaunch">Open an application</button>
-            </div>
-        </main>
+        <!-- Workspace -->
+        <div class="workspace" id="workspace"></div>
 
-        <section class="launcher" id="appLauncher" aria-label="Applications" hidden>
-            <label class="launcher-search">
-                <svg class="ico"><use href="#i-search" /></svg>
-                <input type="search" id="launcherSearch" placeholder="Search applications" autocomplete="off" spellcheck="false">
-            </label>
-            <div class="launcher-grid" id="launcherGrid"></div>
-        </section>
+        <!-- App Launcher (will be populated dynamically) -->
+        <div class="app-launcher" id="appLauncher"></div>
 
-        <section class="settings" id="settingsPanel" aria-label="Settings" hidden>
-            <h2>Settings</h2>
-            <div class="setting">
-                <label for="themeSelect">Theme</label>
-                <select class="field" id="themeSelect">
-                    <option value="mocha">Catppuccin Mocha</option>
-                    <option value="latte">Catppuccin Latte</option>
-                    <option value="nord">Nord</option>
-                    <option value="gruvbox">Gruvbox</option>
-                </select>
+        <!-- Window Manager Panel -->
+        <div class="window-manager-panel" id="windowManagerPanel">
+            <div class="window-manager-header">
+                <div class="window-manager-title">Open Windows</div>
             </div>
-            <div class="setting">
-                <label for="input-color">Accent color</label>
-                <div class="color-row">
-                    <input type="color" id="input-color" value="#cba6f7">
-                    <button class="link-btn" id="resetColor">Reset</button>
-                </div>
+            <div class="window-manager-content" id="windowManagerContent">
+                <div class="window-manager-empty">No windows open</div>
             </div>
-            <div class="setting stack">
-                <span>Background</span>
-                <div class="row">
-                    <input class="field" id="bgInput" type="text" placeholder="Image URL or #colour" spellcheck="false">
-                    <button class="ghost-btn" id="bgApply">Set</button>
-                </div>
-                <div class="row">
-                    <label class="ghost-btn" for="bgFile">Upload image</label>
-                    <input id="bgFile" type="file" accept="image/*" hidden>
-                    <button class="ghost-btn" id="bgClear">Reset</button>
-                </div>
-            </div>
-            <div class="setting">
-                <label for="zoomSelect">Window zoom (DPI)</label>
-                <select class="field" id="zoomSelect">
-                    <option value="0.5">50%</option>
-                    <option value="0.6">60%</option>
-                    <option value="0.7">70%</option>
-                    <option value="0.75">75%</option>
-                    <option value="0.8">80%</option>
-                    <option value="0.9">90%</option>
-                    <option value="1">100%</option>
-                    <option value="1.1">110%</option>
-                    <option value="1.25">125%</option>
-                    <option value="1.5">150%</option>
-                    <option value="1.75">175%</option>
-                    <option value="2">200%</option>
-                </select>
-            </div>
-            <div class="setting">
-                <label for="qualitySelect">Stream quality</label>
-                <select class="field" id="qualitySelect">
-                    <option value="35">Low (fast)</option>
-                    <option value="60">Medium</option>
-                    <option value="80">High</option>
-                    <option value="95">Max</option>
-                </select>
-            </div>
-            <div class="setting">
-                <label for="statsToggle">Stream statistics</label>
-                <input type="checkbox" class="switch" id="statsToggle">
-            </div>
-            <div class="setting stack">
-                <label for="customCss">Custom CSS</label>
-                <textarea class="field" id="customCss" spellcheck="false" placeholder=":root { --primary: #f5c2e7; }&#10;.window { border-radius: 14px; }"></textarea>
-                <div class="row">
-                    <button class="primary-btn" id="cssApply">Apply</button>
-                    <button class="ghost-btn" id="cssClear">Clear</button>
-                </div>
-            </div>
-            <p class="setting-note">Custom CSS overrides the theme. Edit the scale tokens (--sp-*, --fs-*, --ctl, --r) or any colour variable. Full screen lets remote apps receive shortcuts such as Ctrl+W and Ctrl+T; hold Esc to leave.</p>
-            <div class="setting">
-                <span>Session</span>
-                <button class="link-btn" id="logoutBtn">Log out</button>
-            </div>
-        </section>
+        </div>
 
-        <div class="toasts" id="toasts" aria-live="polite"></div>
+        <!-- Dock -->
+        <div class="dock" id="dock"></div>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settingsPanel">
+            <div class="settings-header">
+                <div class="settings-title">Settings</div>
+                <button class="settings-close" id="settingsClose">×</button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <div class="settings-section-title">Appearance</div>
+                    <div class="settings-item">
+                        <div class="settings-item-label">Theme</div>
+                        <div class="theme-toggle">
+                            <button id="dark-button" class="theme-btn active" data-theme="dark">Dark</button>
+                            <button id="light-button" class="theme-btn" data-theme="light">Light</button>
+                        </div>
+		    </div>
+		    <div class="settings-item">
+		      <div class="settings-item-label">Main Color</div>
+			<input type="color" value="color" id="input-color" name="color" placeholder="#4A469E" onchange=/>
+                    </div>
+                </div>
+
+		<!--
+                <div class="settings-section">
+                    <div class="settings-section-title">Credits</div>
+                    <div class="settings-item" style="display: block; padding: 12px;">
+                        <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                            Background image by <a href="https://unsplash.com/@agk42" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent);">Alex Knight</a>
+                        </div>
+                    </div>
+                </div>
+		-->
+            </div>
+        </div>
     </div>
 
     <script src="js/vulpes.js"></script>
     <script src="js/api.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/window.js"></script>
-    <script src="js/window_manager.js"></script>
     <script src="js/apps.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/window_manager.js"></script>
+    <script src="js/window.js"></script>
     <script src="js/webos.js"></script>
 </body>
 </html>

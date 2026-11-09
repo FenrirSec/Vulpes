@@ -55,18 +55,14 @@ USER vulpes
 RUN echo -e 'set -g default-terminal "screen-256color"\nset-option -g default-shell /bin/bash' >> ~/.tmux.conf
 
 # Setting up global user Python env
-# WebX11 is vendored in ./webx11 (fbdir capture, dirty-rect streaming, stuck-key fixes)
-# VulPKG is vendored in ./vulpkg-src (install requires root; list/available do not)
-COPY --chown=vulpes:vulpes webx11 /opt/webx11-src
-COPY --chown=vulpes:vulpes vulpkg-src /opt/vulpkg-src
-RUN virtualenv $HOME/.env  && source $HOME/.env/bin/activate && pip install websockets Pillow python-xlib /opt/webx11-src /opt/vulpkg-src fastapi uvicorn httpx
+RUN virtualenv $HOME/.env  && source $HOME/.env/bin/activate && pip install websockets Pillow python-xlib git+https://github.com/lp1dev/WebX11.git@webos git+https://github.com/FenrirSec/vulpkg.git fastapi uvicorn httpx
 
 # Adding .profile file
 COPY profile ~/.profile
 
-# Vulpkg binary setup (tools install into /usr/local/bin, already on the login PATH)
-RUN mkdir ~/.local/bin && echo -e "\nPATH=$PATH:$HOME/.local/bin/:/shared/bin/:$HOME/.env/bin/:/usr/local/bin" >> ~/.bashrc
-RUN ln -sf $HOME/.env/bin/vulpkg ~/.local/bin/vulpkg
+# Vulpkg binary setup
+RUN mkdir ~/.local/bin && echo -e "\nPATH=$PATH:$HOME/.local/bin/:/shared/bin/:$HOME/.env/bin/" >> ~/.bashrc
+RUN ln -s /opt/webos/env/bin/vulpkg ~/.local/bin/vulpkg
 
 WORKDIR /home/vulpes/
 

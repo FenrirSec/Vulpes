@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Cookie, Header, Response, Depends, status
+from fastapi import FastAPI, HTTPException, Cookie, Response, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response as FastAPIResponse, HTMLResponse, FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -89,8 +89,6 @@ class WindowState(BaseModel):
     width: Optional[float] = None
     height: Optional[float] = None
     isMaximized: Optional[bool] = False
-    isMinimized: Optional[bool] = False
-    snap: Optional[str] = None
     displayId: Optional[int] = None
     terminalPort: Optional[int] = None
     zIndex: Optional[int] = None
@@ -100,7 +98,7 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     """Verify HTTP Basic Auth credentials"""
     is_correct_username = secrets.compare_digest(credentials.username, AUTH_USERNAME)
     is_correct_password = secrets.compare_digest(credentials.password, AUTH_PASSWORD)
-
+    
     if not (is_correct_username and is_correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -108,55 +106,6 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
             headers={"WWW-Authenticate": "Basic"},
         )
     return credentials.username
-
-
-# Session cookie
-#
-# The rest of the UI authenticates every request with an Authorization header
-# sent from fetch(). An <iframe src> cannot carry that header, so proxied pages
-# (and any other iframe-loaded endpoint) would get a 401 with WWW-Authenticate,
-# which is what pops up the browser's native Basic Auth dialog.
-#
-# Instead we hand out an opaque session cookie once the credentials have been
-# checked (on /session, which the UI calls at login and on load). Same-origin
-# iframe requests carry that cookie automatically, so the proxy authenticates
-# without a header and without ever returning WWW-Authenticate.
-COOKIE_NAME = "vulpes_session"
-session_tokens = set()
-
-
-def issue_session_cookie(response: Response):
-    token = secrets.token_urlsafe(32)
-    session_tokens.add(token)
-    response.set_cookie(
-        COOKIE_NAME, token,
-        httponly=True, samesite="lax", path="/", max_age=60 * 60 * 24 * 7,
-    )
-
-
-def _basic_header_ok(authorization: Optional[str]) -> bool:
-    if not authorization or not authorization.lower().startswith("basic "):
-        return False
-    try:
-        decoded = base64.b64decode(authorization.split(" ", 1)[1]).decode("utf-8")
-        username, _, password = decoded.partition(":")
-    except Exception:
-        return False
-    return (secrets.compare_digest(username, AUTH_USERNAME)
-            and secrets.compare_digest(password, AUTH_PASSWORD))
-
-
-def verify_session(
-    vulpes_session: Optional[str] = Cookie(default=None),
-    authorization: Optional[str] = Header(default=None),
-):
-    """Accept the session cookie or a Basic header. Fails with 403 (no
-    WWW-Authenticate) so a failure never triggers the browser login popup."""
-    if vulpes_session and vulpes_session in session_tokens:
-        return True
-    if _basic_header_ok(authorization):
-        return True
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated")
 
 def find_icon_file(icon_name: str) -> Optional[str]:
     """Find an icon file by name in standard icon directories"""
@@ -217,49 +166,24 @@ def parse_desktop_file(filepath: str) -> Optional[dict]:
             return None
         
         entry = config['Desktop Entry']
-
-        entry_type = entry.get('Type', '')
-        if entry_type not in ('Application', 'Link'):
+        
+        if entry.get('Type', '') != 'Application':
             return None
         if entry.get('NoDisplay', 'false').lower() == 'true':
             return None
         if entry.get('Hidden', 'false').lower() == 'true':
             return None
-
+        
         name = entry.get('Name', '')
         if not name:
             return None
-
-        # Type=Link entries are web apps shown in an iframe (e.g. code-server).
-        # vulpkg uses these to register browser-based tools in the launcher.
-        if entry_type == 'Link':
-            url = entry.get('URL', '')
-            if not url:
-                return None
-            icon_name = entry.get('Icon', '')
-            icon_path = find_icon_file(icon_name) if icon_name else None
-            icon_data_uri = icon_to_data_uri(icon_path) if icon_path else None
-            app_id = os.path.splitext(os.path.basename(filepath))[0]
-            return {
-                'id': app_id,
-                'name': name,
-                'icon': icon_data_uri if icon_data_uri else "",
-                'iconPath': icon_path,
-                'type': 'url',
-                'url': url,
-                # served same-origin via nginx, so bypass the HTML rewriting proxy
-                'proxy': entry.get('X-Vulpes-Proxy', 'false').lower() == 'true',
-                'category': 'development',
-                'description': entry.get('Comment', ''),
-                'docked': entry.get('Docked') is not None,
-            }
-
+        
         exec_cmd = entry.get('Exec', '')
         if not exec_cmd:
             return None
-
+        
         exec_cmd = ' '.join([part for part in exec_cmd.split() if not part.startswith('%')])
-
+        
         icon_name = entry.get('Icon', '')
         icon_path = find_icon_file(icon_name) if icon_name else None
         icon_data_uri = icon_to_data_uri(icon_path) if icon_path else None
@@ -392,17 +316,9 @@ async def shutdown_event():
 async def root():
     return {"message": "WebOS Applications API", "version": "3.0"}
 
-@app.get("/authz")
-async def authz(_auth: bool = Depends(verify_session)):
-    """Lightweight check for nginx auth_request: 204 when the session cookie
-    (or Basic header) is valid, 403 otherwise. Guards the raw backends
-    (terminals, X11 streams, /port apps) that nginx proxies directly."""
-    return Response(status_code=204)
-
 @app.get("/session")
-async def get_session(response: Response, username: str = Depends(verify_credentials)):
-    """Get global session windows (and (re)issue the session cookie)"""
-    issue_session_cookie(response)
+async def get_session(username: str = Depends(verify_credentials)):
+    """Get global session windows"""
     windows = global_session["windows"]
     print(f"User {username} accessing global session with {len(windows)} windows")
     return {"windows": windows}
@@ -575,7 +491,7 @@ async def check_terminal(port: int, username: str = Depends(verify_credentials))
     return {"status": "not_found", "port": port}
 
 @app.get("/proxy/{encoded_url}", response_class=HTMLResponse)
-async def proxy_url(encoded_url: str, _auth: bool = Depends(verify_session)):
+async def proxy_url(encoded_url: str, username: str = Depends(verify_credentials)):
     """Proxy requests to external URLs to avoid CORS/framing issues"""
     try:
         url = base64.b64decode(encoded_url).decode("utf-8")

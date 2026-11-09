@@ -1,50 +1,40 @@
-// HTTP API helpers
-Vulpes.api = (() => {
-    let credentials = null;
+// HTTP API Interactions
 
-    function setCredentials(c) { credentials = c; }
-    function getCredentials() { return credentials; }
+const api = (() => {
 
+    // Get auth basic headers
     function getAuthHeaders() {
-        if (!credentials) return {};
-        return { 'Authorization': 'Basic ' + btoa(`${credentials.username}:${credentials.password}`) };
+        if (!authCredentials) return {};
+        const credentials = btoa(`${authCredentials.username}:${authCredentials.password}`);
+        return { 'Authorization': `Basic ${credentials}` };
     }
 
-    async function apps(path, options = {}) {
-        const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
-        if (options.json !== undefined) {
-            headers['Content-Type'] = 'application/json';
-            options = { ...options, body: JSON.stringify(options.json) };
-        }
-        return fetch(Vulpes.APPS_API_BASE + path, { ...options, headers });
+    async function getSession() {
+        return await fetch(`${APPS_API_BASE}/session`, {
+            headers: getAuthHeaders()
+        })
     }
 
-    async function x11(path, options = {}) {
-        const headers = { ...(options.headers || {}) };
-        if (options.json !== undefined) {
-            headers['Content-Type'] = 'application/json';
-            options = { ...options, body: JSON.stringify(options.json) };
-        }
-        return fetch(Vulpes.API_BASE + path, { ...options, headers });
+    async function getClipboard(window_id) {
+        return await fetch(`${APPS_API_BASE}/session/window/${window_id}/clipboard`, {
+            header: getAuthHeaders()
+        })
     }
 
-    const getSession = () => apps('/session');
-    const getApplications = () => apps('/applications');
-    const saveWindow = (state) => apps('/session/window', { method: 'POST', json: state });
-    const deleteWindow = (id) => apps(`/session/window/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    const startTerminal = (command) => apps('/terminal/start', { method: 'POST', json: { command } });
-    const stopTerminal = (port) => apps(`/terminal/${port}`, { method: 'DELETE' });
-    const terminalStatus = (port) => apps(`/terminal/${port}/status`);
-
-    const createDisplay = (width, height) => x11('/display', { method: 'POST', json: { width, height } });
-    const runInDisplay = (id, executable) => x11(`/display/${id}/run`, { method: 'POST', json: { executable } });
-    const closeDisplay = (id) => x11(`/display/${id}`, { method: 'DELETE' });
-    const listDisplays = () => x11('/displays');
+    async function postClipboard(window_id, clipboardValue) {
+        return await fetch(`${APPS_API_BASE}/session/window/${window_id}/clipboard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: clipboardValue })
+        });
+    }
 
     return {
-        setCredentials, getCredentials, getAuthHeaders,
-        getSession, getApplications, saveWindow, deleteWindow,
-        startTerminal, stopTerminal, terminalStatus,
-        createDisplay, runInDisplay, closeDisplay, listDisplays,
-    };
+        getAuthHeaders,
+        getSession,
+        getClipboard,
+        postClipboard
+    }
 })();
+
+Vulpes.api = api

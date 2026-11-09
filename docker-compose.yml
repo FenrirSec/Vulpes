@@ -18,8 +18,6 @@ services:
       - ./vulpkg:/var/lib/vulpkg/repo
       - ./applications:/home/vulpes/.local/share/applications
       - ./icons:/home/vulpes/.local/share/icons
-    # Xvfb framebuffers live in /dev/shm (about 33 MB per 4K window); Docker's default is 64 MB
-    shm_size: "1gb"
     cap_add:
       - NET_ADMIN
     privileged: true

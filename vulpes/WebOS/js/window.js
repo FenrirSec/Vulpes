@@ -1,145 +1,192 @@
-// A desktop window hosting one application (X11 app, web page or terminal)
+
+// Window class
 class Window {
     constructor(app, data = {}) {
-        this.id = data.id || `window-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        this.id = data.id || `window-${Date.now()}-${Math.random()}`;
         this.app = app;
         this.data = data;
-        this.displayId = data.displayId ?? null;
-        this.terminalPort = data.terminalPort ?? null;
-        this.state = data.isMaximized ? 'maximized' : (data.snap || 'normal'); // normal | maximized | left | right
-        this.minimized = !!data.isMinimized;
-        this.zIndex = data.zIndex || 0;
-        this.ready = false;
-        this.closed = false;
-        this.iframe = null;
-        this.tabs = [];
-        this.activeTab = null;
-        this.bounds = (data.width && data.height)
-            ? { x: data.x ?? 40, y: data.y ?? 40, width: data.width, height: data.height }
-            : Vulpes.wm.initialBounds(app);
-        this.build();
+        this.element = null;
+        this.isMaximized = data.isMaximized || false;
+        this.savedBounds = data.savedBounds || null;
+        this.zIndex = nextZIndex++;
+        this.displayId = data.displayId || null;
+        this.terminalPort = data.terminalPort || null;
+        
+        this.bounds = {
+            x: data.x || (window.innerWidth / 2 - 400),
+            y: data.y || (window.innerHeight / 2 - 300),
+            width: data.width || 800,
+            height: data.height || 600
+        };
+        
+        this.create();
     }
 
-    get name() { return this.app.name; }
-    get icon() { return Vulpes.apps.iconUrl(this.app); }
-    get isExecutable() { return this.app.type === 'executable'; }
-    get isTerminal() { return this.app.type === 'tui' || this.app.type === 'terminal'; }
+    create() {
+        this.el = document.createElement('div');
+        this.el.className = 'window ' + this.app.type;
+        this.el.id = this.id;
+        this.el.style.left = `${this.bounds.x}px`;
+        this.el.style.top = `${this.bounds.y}px`;
+        this.el.style.width = `${this.bounds.width}px`;
+        this.el.style.height = `${this.bounds.height}px`;
+        this.el.style.zIndex = this.zIndex;
 
-    // ---------------------------------------------------------------- DOM
-    build() {
-        const el = document.createElement('div');
-        el.className = `window type-${this.app.type}`;
-        el.id = this.id;
-        el.setAttribute('role', 'dialog');
-        el.setAttribute('aria-label', this.name);
-        el.innerHTML = `
-            <div class="window-titlebar">
-                <span class="window-icon"></span>
-                <span class="window-title"></span>
-                <span class="resize-indicator" hidden></span>
+        this.el.innerHTML = `
+            <div class="window-titlebar" data-window-id="${this.id}">
+                <div class="window-title">
+                    <span class="window-icon"><img class="app-icon" src="${this.app.icon}"/></span>
+                    <span>${this.app.name}</span>
+                </div>
                 <div class="window-controls">
-                    <button class="wc" data-action="minimize" title="Minimize" tabindex="-1"><svg><use href="#i-min"/></svg></button>
-                    <button class="wc" data-action="maximize" title="Maximize" tabindex="-1"><svg><use href="#i-max"/></svg></button>
-                    <button class="wc close" data-action="close" title="Close" tabindex="-1"><svg><use href="#i-close"/></svg></button>
+                    <button class="window-control-btn window-control-close" data-action="close"></button>
+                    <button class="window-control-btn window-control-minimize" data-action="minimize"></button>
+                    <button class="window-control-btn window-control-maximize" data-action="maximize"></button>
                 </div>
             </div>
             <div class="window-content">
-                <div class="window-loading"><div class="spinner"></div><span></span></div>
+                <div class="window-loading">
+                    <div class="spinner"></div>
+                    <div>Loading ${this.app.name}...</div>
+                </div>
             </div>
-            ${['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => `<div class="resize-handle ${d}" data-dir="${d}"></div>`).join('')}
+            ${!isMobile ? `
+                <div class="resize-handle n"></div>
+                <div class="resize-handle s"></div>
+                <div class="resize-handle e"></div>
+                <div class="resize-handle w"></div>
+                <div class="resize-handle ne"></div>
+                <div class="resize-handle nw"></div>
+                <div class="resize-handle se"></div>
+                <div class="resize-handle sw"></div>
+            ` : ''}
         `;
-        el.querySelector('.window-icon').appendChild(Vulpes.apps.iconElement(this.app));
-        el.querySelector('.window-title').textContent = this.name;
-        el.querySelector('.window-loading span').textContent = `Starting ${this.name}…`;
 
-        this.el = this.element = el;
-        this.titlebar = el.querySelector('.window-titlebar');
-        this.content = el.querySelector('.window-content');
-        this.loading = el.querySelector('.window-loading');
 
-        this.titlebar.addEventListener('pointerdown', (e) => {
-            if (e.target.closest('.wc')) return;
-            Vulpes.wm.startDrag(this, e);
+        document.getElementById('workspace').appendChild(this.el);
+
+	this.element = this.el
+        this.setupEventListeners();
+        
+        if (!this.data.restored) {
+            this.loadContent();
+        } else {
+            this.reconnectContent();
+        }
+    }
+
+
+    setupEventListeners() {
+        const titlebar = this.element.querySelector('.window-titlebar');
+        const controls = this.element.querySelectorAll('.window-control-btn');
+
+        titlebar.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.window-control-btn')) return;
+            
+            console.log('mousedown')
+            e.preventDefault();
+            e.stopPropagation();
+            
+            this.focus();
+            isDragging = true;
+            
+            const rect = this.element.getBoundingClientRect();
+	    
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            
+            window.draggingWindow = this;
+            
+            document.body.style.cursor = 'grabbing';
+            this.element.style.transition = 'none';
         });
-        this.titlebar.addEventListener('dblclick', (e) => {
-            if (!e.target.closest('.wc')) this.toggleMaximize();
+
+        titlebar.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.window-control-btn')) return;
+            
+            e.preventDefault();
+            this.focus();
+            isDragging = true;
+            
+            const touch = e.touches[0];
+            const rect = this.element.getBoundingClientRect();
+            dragOffset.x = touch.clientX - rect.left;
+            dragOffset.y = touch.clientY - rect.top;
+            
+            window.draggingWindow = this;
         });
-        el.querySelectorAll('.wc').forEach(btn => {
-            btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+        controls.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const action = btn.dataset.action;
                 if (action === 'close') this.close();
                 else if (action === 'minimize') this.minimize();
-                else this.toggleMaximize();
+                else if (action === 'maximize') this.toggleMaximize();
             });
         });
-        el.querySelectorAll('.resize-handle').forEach(h => {
-            h.addEventListener('pointerdown', (e) => Vulpes.wm.startResize(this, h.dataset.dir, e));
-        });
-        el.addEventListener('pointerdown', () => Vulpes.wm.focus(this), true);
 
-        Vulpes.wm.workspace.appendChild(el);
-        this.applyGeometry();
-        this.updateMaximizeButton();
-        if (this.minimized) el.classList.add('minimized');
-        else el.animate?.([{ opacity: 0, transform: 'scale(.97)' }, { opacity: 1, transform: 'none' }],
-            { duration: Vulpes.wm.motion(140), easing: 'cubic-bezier(.2,.8,.2,1)' });
+        this.element.addEventListener('mousedown', () => this.focus());
 
-        if (this.data.restored) this.reconnectContent(); else this.loadContent();
-    }
-
-    applyGeometry(animate = false) {
-        const g = Vulpes.wm.geometryFor(this);
-        const s = this.el.style;
-        if (animate && Vulpes.wm.motion(1)) {
-            this.el.classList.add('animating');
-            clearTimeout(this._animTimer);
-            this._animTimer = setTimeout(() => this.el.classList.remove('animating'), 200);
+        if (!isMobile) {
+            const resizeHandles = this.element.querySelectorAll('.resize-handle');
+            resizeHandles.forEach(handle => {
+                handle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.startResize(e, handle.classList[1]);
+                });
+            });
         }
-        s.left = `${g.x}px`;
-        s.top = `${g.y}px`;
-        s.width = `${g.width}px`;
-        s.height = `${g.height}px`;
-        this.el.classList.toggle('maximized', this.state === 'maximized' || Vulpes.isMobile());
-        this.el.classList.toggle('snapped', this.state === 'left' || this.state === 'right');
     }
 
-    rect() { return Vulpes.wm.geometryFor(this); }
-
-    updateMaximizeButton() {
-        const btn = this.el.querySelector('[data-action="maximize"]');
-        const full = this.state !== 'normal';
-        btn.title = full ? 'Restore' : 'Maximize';
-        btn.querySelector('use').setAttribute('href', full ? '#i-restore' : '#i-max');
-    }
-
-    // ------------------------------------------------------------ content
     async loadContent() {
-        this.setLoading(`Starting ${this.name}…`);
+        const contentDiv = this.element.querySelector('.window-content');
+        const loading = contentDiv.querySelector('.window-loading');
+
         try {
-            if (this.isExecutable) await this.loadExecutable();
-            else if (this.app.type === 'url') this.loadUrl();
-            else if (this.isTerminal) await this.loadTerminal();
-            else throw new Error(`Unknown application type "${this.app.type}"`);
-            this.save();
+            if (this.app.type === 'executable') {
+                await this.loadExecutable(contentDiv);
+            } else if (this.app.type === 'url') {
+                await this.loadUrl(contentDiv);
+                if (loading) loading.remove();
+            } else if (this.app.type === 'tui' || this.app.type === 'terminal') {
+                await this.loadTerminal(contentDiv);
+                if (loading) loading.remove();
+            }
+            
+            await saveWindowState(this);
         } catch (error) {
             console.error('Failed to load content:', error);
-            this.showProblem(`${this.name} could not start`, error.message, true);
+            if (loading) {
+                loading.innerHTML = `
+                    <div style="color: var(--accent-error)">Failed to load</div>
+                    <div style="font-size: 11px">${error.message}</div>
+                `;
+            }
         }
     }
 
     async reconnectContent() {
+        const contentDiv = this.element.querySelector('.window-content');
+        const loading = contentDiv.querySelector('.window-loading');
+
         try {
-            if (this.isExecutable && this.displayId) {
-                this.attachDisplay();
-            } else if (this.isTerminal && this.terminalPort) {
-                const r = await Vulpes.api.terminalStatus(this.terminalPort);
-                const status = r.ok ? (await r.json()).status : 'not_found';
-                if (status === 'running') { this.ensureTabBar(); await this.openTab(null, { port: this.terminalPort }); }
-                else { this.terminalPort = null; await this.loadContent(); }
-            } else {
-                await this.loadContent();
+            if (this.app.type === 'executable' && this.displayId) {
+                const iframe = document.createElement('iframe');
+                iframe.src = `${API_BASE}/display/${this.displayId}`;
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                contentDiv.appendChild(iframe);
+                
+                this.waitForCanvasReady(iframe, contentDiv);
+                this.monitorCanvas(iframe);
+            } else if (this.app.type === 'url') {
+                await this.loadUrl(contentDiv);
+                if (loading) loading.remove();
+            } else if (this.app.type === 'tui' || this.app.type === 'terminal') {
+                await this.loadTerminal(contentDiv);
+                if (loading) loading.remove();
             }
         } catch (error) {
             console.error('Failed to reconnect content:', error);
@@ -147,370 +194,339 @@ class Window {
         }
     }
 
-    makeFrame(src, extra = {}) {
-        if (this.iframe) this.iframe.remove();
-        const iframe = document.createElement('iframe');
-        iframe.allow = 'clipboard-read; clipboard-write; fullscreen';
-        Object.entries(extra).forEach(([k, v]) => iframe.setAttribute(k, v));
-        iframe.src = src;
-        this.content.appendChild(iframe);
-        this.iframe = iframe;
-        return iframe;
-    }
-
-    async loadExecutable() {
-        const ws = Vulpes.wm.workspaceRect();
-        // the display is the largest this window may ever get: the screen
-        const width = Math.ceil(Math.max(window.screen.width || 0, ws.width));
-        const height = Math.ceil(Math.max(window.screen.height || 0, ws.height));
-        const displayRes = await Vulpes.api.createDisplay(width, height);
-        if (!displayRes.ok) throw new Error(`The display server refused to create a display (HTTP ${displayRes.status}).`);
-        this.displayId = (await displayRes.json()).display;
-        this.save();
-        const execRes = await Vulpes.api.runInDisplay(this.displayId, this.app.executable);
-        if (!execRes.ok) throw new Error(`The display server could not run "${this.app.executable}" (HTTP ${execRes.status}).`);
-        this.attachDisplay();
-    }
-
-    attachDisplay() {
-        this.makeFrame(`${Vulpes.API_BASE}/display/${this.displayId}`);
-        // WebX11 posts 'webx11:ready' after its first frame; this is only a safety net
-        clearTimeout(this._readyTimer);
-        this._readyTimer = setTimeout(() => this.setReady(), 12000);
-    }
-
-    loadUrl() {
-        const proxy = this.app.proxy !== false;
-        const toSrc = (url) => proxy ? `${Vulpes.APPS_API_BASE}/proxy/${btoa(url)}` : url;
-        // Proxied external sites are sandboxed; our own same-origin web apps
-        // (e.g. code-server) get the extra permissions an IDE needs.
-        const iframe = this.makeFrame(toSrc(this.app.url), {
-            sandbox: proxy
-                ? 'allow-same-origin allow-scripts allow-forms allow-popups'
-                : 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads allow-pointer-lock allow-top-navigation',
+    async loadExecutable(contentDiv) {
+        const displayRes = await fetch(`${API_BASE}/display`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ width: 10000, height: 10000 })
         });
-        if (proxy) {
-            this._onNavigate = (event) => {
-                if (event.source === iframe.contentWindow && event.data && event.data.type === 'navigate') {
-                    iframe.src = toSrc(event.data.url);
-                }
-            };
-            window.addEventListener('message', this._onNavigate);
-        }
-        iframe.addEventListener('load', () => this.setReady(), { once: true });
-    }
 
-    // ------------------------------------------------------- terminal (tabbed)
-    async loadTerminal() {
-        this.ensureTabBar();
-        await this.openTab(this.app.command || null);
-    }
+        if (!displayRes.ok) throw new Error(`Failed to create display: HTTP ${displayRes.status}`);
+        const displayData = await displayRes.json();
+        this.displayId = displayData.display;
 
-    ensureTabBar() {
-        if (this.tabBar) return;
-        const bar = document.createElement('div');
-        bar.className = 'terminal-tabs';
-        bar.innerHTML = '<div class="tabstrip" role="tablist"></div>'
-            + '<button class="tab-add" title="New tab" aria-label="New terminal tab" tabindex="-1">+</button>';
-        this.titlebar.after(bar);
-        this.tabBar = bar;
-        this.tabStrip = bar.querySelector('.tabstrip');
-        bar.querySelector('.tab-add').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.openTab(this.app.command || null).catch(err => {
-                console.error('New terminal tab failed:', err);
-                Vulpes.ui.notify('Could not open a new terminal tab', 'error');
+        const execRes = await fetch(`${API_BASE}/display/${this.displayId}/run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ executable: this.app.executable })
+        });
+
+        if (!execRes.ok) throw new Error(`Failed to launch executable: HTTP ${execRes.status}`);
+
+        const contentRect = contentDiv.getBoundingClientRect();
+
+        const displayId = this.displayId;
+
+
+        const iframe = document.createElement('iframe');
+        iframe.src = `${API_BASE}/display/${this.displayId}`;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        contentDiv.appendChild(iframe);
+        
+        this.waitForCanvasReady(iframe, contentDiv);
+        console.log('Executable loaded')
+        this.hasLoaded = false;
+        this.monitorCanvas(iframe);
+	// We update the size directly after the original display is done
+	setTimeout(async function() {
+            await fetch(`${API_BASE}/resize/${displayId}/${Math.floor(contentRect.width)}/${Math.floor(contentRect.height)}`, {
+		method: 'POST'
             });
-        });
+	}, 1000);
     }
 
-    // Open a terminal session (its own xterm.rs port) as a new tab. Pass
-    // { port } to re-attach an already-running session (session restore).
-    async openTab(command, { port = null } = {}) {
-        this.setLoading(`Starting ${this.name}…`);
-        if (port === null) {
-            const response = await Vulpes.api.startTerminal(command || null);
-            if (!response.ok) throw new Error(`The terminal service answered HTTP ${response.status}.`);
-            port = (await response.json()).port;
-        }
-        const tab = { port, iframe: null, btn: null, title: `Terminal ${this.tabs.length + 1}` };
-        this.tabs.push(tab);
-        this.renderTab(tab);
-        this.attachTab(tab);
-        this.activateTab(tab);
-    }
-
-    renderTab(tab) {
-        const btn = document.createElement('button');
-        btn.className = 'term-tab';
-        btn.setAttribute('role', 'tab');
-        btn.innerHTML = '<span class="term-tab-label"></span><span class="term-tab-close" title="Close tab">×</span>';
-        btn.querySelector('.term-tab-label').textContent = tab.title;
-        btn.addEventListener('click', (e) => {
-            if (e.target.closest('.term-tab-close')) { e.stopPropagation(); this.closeTab(tab); }
-            else this.activateTab(tab);
-        });
-        tab.btn = btn;
-        this.tabStrip.appendChild(btn);
-    }
-
-    attachTab(tab, attempt = 0) {
-        // Load the terminal page directly. xterm.rs needs a moment to start
-        // listening; until then nginx returns a 502 page, which we detect and
-        // retry instead of showing a dead terminal.
-        const url = `${Vulpes.BASE}/term/${tab.port}/`;
-        if (tab.iframe) tab.iframe.remove();
+    async loadUrl(contentDiv) {
+        const shouldProxy = this.app.proxy !== false;
+        
         const iframe = document.createElement('iframe');
-        iframe.allow = 'clipboard-read; clipboard-write; fullscreen';
-        iframe.className = 'term-frame';
-        iframe.src = url;
-        this.content.appendChild(iframe);
-        tab.iframe = iframe;
-        if (this.activeTab === tab) this.iframe = iframe;
-        iframe.addEventListener('load', () => {
-            if (this.closed) return;
-            let notReady = false;
-            try {
-                const doc = iframe.contentDocument;
-                const text = doc && doc.body ? doc.body.innerText : '';
-                if (/\b502\b|Bad Gateway|nginx\//i.test(text) || (doc && doc.body && doc.body.children.length === 0 && !text.trim())) {
-                    notReady = true;
+        
+        if (shouldProxy) {
+            const proxyUrl = `${APPS_API_BASE}/proxy/${btoa(this.app.url)}`;
+            iframe.src = proxyUrl;
+            iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups';
+            
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'navigate') {
+                    iframe.src = `${APPS_API_BASE}/proxy/${btoa(event.data.url)}`;
                 }
-            } catch (e) { /* same-origin read failed: assume it loaded */ }
-            if (notReady && attempt < 30) {
-                setTimeout(() => { if (!this.closed) this.attachTab(tab, attempt + 1); }, 250);
-            } else if (notReady) {
-                this.showProblem('Terminal did not start',
-                    'The terminal backend did not respond. Start it again to retry.', true);
-            } else {
-                setTimeout(() => this.setReady(), 120);
-                this.enableTerminalAutofit();
-                if (this.activeTab === tab) this.autofitTerminal();
-            }
-        }, { once: true });
-    }
-
-    activateTab(tab) {
-        this.activeTab = tab;
-        this.terminalPort = tab.port;
-        this.iframe = tab.iframe;
-        this.tabs.forEach(t => {
-            const on = t === tab;
-            if (t.iframe) t.iframe.classList.toggle('hidden', !on);
-            if (t.btn) t.btn.classList.toggle('active', on);
-        });
-        this.save();
-        // a tab that was hidden has stale dimensions; re-fit once it is shown
-        requestAnimationFrame(() => this.autofitTerminal());
-        this.focusContent();
-    }
-
-    async closeTab(tab) {
-        const i = this.tabs.indexOf(tab);
-        if (i === -1) return;
-        this.tabs.splice(i, 1);
-        if (tab.iframe) tab.iframe.remove();
-        if (tab.btn) tab.btn.remove();
-        Vulpes.api.stopTerminal(tab.port).catch(() => {});
-        if (!this.tabs.length) { this.close(); return; }
-        if (this.activeTab === tab) this.activateTab(this.tabs[Math.max(0, i - 1)]);
-    }
-
-    // The xterm.rs page fits itself on load and on its own window 'resize', but
-    // the first fit runs before the iframe is laid out (the loading overlay is
-    // still up), so it keeps the 80x24 default until the user types `resize`.
-    // The iframe is same-origin, so we dispatch a resize into it once it has a
-    // real size, and on every later size change.
-    // plain re-fit: ask the same-origin xterm.js page to fit() and push its
-    // size to the PTY. Enough when the iframe size really changed (user resize).
-    refitTerminal() {
-        const w = this.iframe && this.iframe.contentWindow;
-        if (!w) return;
-        try { w.dispatchEvent(new Event('resize')); } catch (e) {}
-    }
-
-    // forced re-fit for startup / tab-show: a synthetic resize can be a no-op
-    // if xterm already holds the right cols/rows while the PTY is still at its
-    // 80x24 default, so we briefly change the iframe height by ~2 rows to
-    // guarantee an onResize (which is what sends {cols,rows} to the PTY).
-    autofitTerminal() {
-        const f = this.iframe;
-        if (!f || !f.clientHeight) { this.refitTerminal(); return; }
-        const prev = f.style.height;
-        f.style.height = Math.max(40, f.clientHeight - 40) + 'px';
-        this.refitTerminal();
-        void f.offsetHeight;               // force reflow so the inner window sees the change
-        requestAnimationFrame(() => {
-            if (this.iframe !== f) return;
-            f.style.height = prev || '';
-            this.refitTerminal();
-        });
-    }
-
-    enableTerminalAutofit() {
-        // forced re-fits spread out to beat web-font / ws-connect timing
-        [150, 450, 900, 1500].forEach(ms => setTimeout(() => this.autofitTerminal(), ms));
-        if (this._termAutofit || typeof ResizeObserver === 'undefined') return;
-        let t = 0;
-        this._termAutofit = new ResizeObserver(() => {
-            // real size change already fires the inner resize; a plain fit is enough
-            clearTimeout(t);
-            t = setTimeout(() => this.refitTerminal(), 80);
-        });
-        this._termAutofit.observe(this.content);
-    }
-
-    setLoading(text) {
-        this.ready = false;
-        this.loading.innerHTML = '<div class="spinner"></div><span></span>';
-        this.loading.querySelector('span').textContent = text;
-        this.loading.hidden = false;
-    }
-
-    setReady() {
-        clearTimeout(this._readyTimer);
-        if (this.ready) return;
-        this.ready = true;
-        this.loading.hidden = true;
-        if (Vulpes.wm.active === this) this.focusContent();
-        if (this.isExecutable) {
-            if (Vulpes.ui.showStats()) this.post({ type: 'webx11:hud', show: true });
-            this.post({ type: 'webx11:quality', value: Number(Vulpes.ui.streamQuality()) });
+            });
+        } else {
+            iframe.src = this.app.url;
+            iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation';
         }
+        
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        
+        contentDiv.appendChild(iframe);
     }
 
-    showProblem(title, detail, canRetry) {
-        this.loading.hidden = false;
-        this.loading.innerHTML = `
-            <div class="problem">
-                <strong></strong>
-                <p></p>
-                <div class="problem-actions">
-                    ${canRetry ? '<button class="primary-btn" data-do="retry">Try again</button>' : ''}
-                    <button class="ghost-btn" data-do="close">Close window</button>
-                </div>
-            </div>`;
-        this.loading.querySelector('strong').textContent = title;
-        this.loading.querySelector('p').textContent = detail || '';
-        this.loading.querySelector('[data-do="close"]').addEventListener('click', () => this.close());
-        const retry = this.loading.querySelector('[data-do="retry"]');
-        if (retry) retry.addEventListener('click', () => this.relaunch());
-    }
-
-    async relaunch() {
-        if (this.displayId) Vulpes.api.closeDisplay(this.displayId).catch(() => {});
-        (this.tabs || []).forEach(t => {
-            Vulpes.api.stopTerminal(t.port).catch(() => {});
-            if (t.iframe) t.iframe.remove();
-            if (t.btn) t.btn.remove();
+    async loadTerminal(contentDiv) {
+        const command = this.app.command || null;
+        const response = await fetch(`${APPS_API_BASE}/terminal/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...Vulpes.api.getAuthHeaders() },
+            body: JSON.stringify({ command })
         });
-        this.tabs = [];
-        this.activeTab = null;
-        if (this.terminalPort) Vulpes.api.stopTerminal(this.terminalPort).catch(() => {});
-        if (this.iframe) { this.iframe.remove(); this.iframe = null; }
-        this.displayId = null;
-        this.terminalPort = null;
-        await this.loadContent();
+        
+        const data = await response.json();
+        this.terminalPort = data.port;
+
+        const iframe = document.createElement('iframe');
+        iframe.src = window.location.toString() + `/term/${data.port.toString()}/`
+
+        contentDiv.appendChild(iframe);
+        this.waitForCanvasReady(iframe, contentDiv);
     }
 
-    post(message) {
-        try { this.iframe && this.iframe.contentWindow && this.iframe.contentWindow.postMessage(message, '*'); } catch (e) {}
-    }
+    waitForCanvasReady(iframe, contentDiv) {
+        console.log('waitForCanvasReady')
 
-    focusContent() {
-        if (!this.iframe || this.minimized) return;
-        try { this.iframe.focus({ preventScroll: true }); } catch (e) {}
-        try { this.iframe.contentWindow && this.iframe.contentWindow.focus(); } catch (e) {}
-        if (this.isExecutable) {
-            this.post({ type: 'webx11:focus' });
-        } else if (this.isTerminal) {
-            // focus the terminal's own input so keystrokes land without an
-            // extra click when the window is focused from the taskbar
+        const loading = contentDiv.querySelector('.window-loading');
+        if (!loading) return;
+
+        const checkCanvas = () => {
             try {
-                const doc = this.iframe.contentDocument;
-                const el = doc && (doc.querySelector('textarea, input, [contenteditable], canvas') || doc.body);
-                if (el && el.focus) el.focus({ preventScroll: true });
-            } catch (e) { /* cross-origin or not ready */ }
-        }
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                console.log('document', iframeDoc)
+                if (!iframeDoc) return false;
+
+                // Temporary fix for the resize issue
+                const scrollHeight = iframe.contentDocument.body.scrollHeight
+		iframe.contentDocument.body.addEventListener("resize", () => {
+		    console.log('RESIZE EVENT CALLED')
+		})
+                console.log('scrollHeight is', scrollHeight)
+                if (scrollHeight == 150) {
+                    setTimeout(() => {
+                    iframe.style.height = '100%'
+                    iframe.style.width = '100%'
+                    }, 500)
+                }
+                //
+                const canvas = iframeDoc.querySelector('canvas#windowImage');
+                return canvas && canvas.width > 100 && canvas.height > 100;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        const pollInterval = setInterval(() => {
+            if (checkCanvas()) {
+                clearInterval(pollInterval);
+                if (loading && loading.parentNode) {
+                    loading.remove();
+                    console.log('Canvas Loaded!')
+                }
+            }
+        }, 50);
+
+        setTimeout(() => {
+            clearInterval(pollInterval);
+            if (loading && loading.parentNode) {
+                loading.remove();
+            }
+        }, 3000);
     }
 
-    // ------------------------------------------------------------ actions
-    focus() { Vulpes.wm.focus(this); }
+    monitorCanvas(iframe) {
+        const checkInterval = setInterval(() => {
+            try {
+		const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+		const canvas = iframeDoc.querySelector('canvas#windowImage');
 
-    setState(state, animate = true) {
-        // this.bounds always holds the floating geometry, so restoring is exact
-        this.state = state;
-        this.applyGeometry(animate);
-        this.updateMaximizeButton();
-        this.save();
+                if (!iframeDoc) return;
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d', { alpha: false,
+                    willReadFrequently: true,
+                    desynchronized: true 
+                });
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const pixels = imageData.data;
+                
+                let allBlack = true;
+                for (let i = 0; i < pixels.length; i += 4) {
+                    if (pixels[i] > 5 || pixels[i+1] > 5 || pixels[i+2] > 5) {
+                        allBlack = false;
+                        break;
+                    }
+                }
+                
+                if (allBlack && this.hasLoaded) {
+                    console.log('Canvas is empty, closing window:', this.app.name);
+                    clearInterval(checkInterval);
+                    this.close();
+                } else {
+                    this.hasLoaded = true;
+                }
+            } catch (e) {
+		console.warning(e)
+            }
+        }, 1000);
+
+        this.canvasMonitorInterval = checkInterval;
+    }
+
+    focus() {
+        windows.forEach(w => w.element.classList.remove('active'));
+        this.element.classList.add('active');
+        this.zIndex = nextZIndex++;
+        this.element.style.zIndex = this.zIndex;
+        activeWindow = this;
+        updateWindowManager();
     }
 
     toggleMaximize() {
-        if (Vulpes.isMobile()) return;
-        this.setState(this.state === 'normal' ? 'maximized' : 'normal');
+        if (isMobile) return;
+
+        if (this.isMaximized && this.savedBounds) {
+            this.element.classList.remove('maximized');
+            this.element.style.left = `${this.savedBounds.x}px`;
+            this.element.style.top = `${this.savedBounds.y}px`;
+            this.element.style.width = `${this.savedBounds.width}px`;
+            this.element.style.height = `${this.savedBounds.height}px`;
+            this.isMaximized = false;
+        } else {
+            this.savedBounds = { ...this.bounds };
+            this.element.classList.add('maximized');
+            this.isMaximized = true;
+        }
+        
+        saveWindowState(this);
     }
 
     minimize() {
-        if (this.minimized) return;
-        this.minimized = true;
-        this.post({ type: 'webx11:release_all' });
-        const target = Vulpes.wm.taskButton(this);
-        const done = () => { this.el.classList.add('minimized'); };
-        if (target && this.el.animate && Vulpes.wm.motion(1)) {
-            const a = this.el.getBoundingClientRect(), b = target.getBoundingClientRect();
-            const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
-            const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
-            this.el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.12)`, opacity: 0 }],
-                { duration: 190, easing: 'cubic-bezier(.4,0,.6,1)' }).finished.then(done, done);
-        } else done();
-        Vulpes.wm.onMinimize(this);
-        this.save();
-    }
-
-    restore() {
-        if (!this.minimized) return;
-        this.minimized = false;
-        this.el.classList.remove('minimized');
-        const target = Vulpes.wm.taskButton(this);
-        if (target && this.el.animate && Vulpes.wm.motion(1)) {
-            const a = this.el.getBoundingClientRect(), b = target.getBoundingClientRect();
-            const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
-            const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
-            this.el.animate([{ transform: `translate(${dx}px, ${dy}px) scale(.12)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
-                { duration: 190, easing: 'cubic-bezier(.2,.8,.2,1)' });
-        }
-        this.save();
+        this.element.style.display = 'none';
+        showNotification(`${this.app.name} minimized`, 'success');
+        saveWindowState(this);
+        updateWindowManager();
     }
 
     async close() {
-        if (this.closed) return;
-        this.closed = true;
-        clearTimeout(this._readyTimer);
-        clearTimeout(this._saveTimer);
-        if (this._termAutofit) { this._termAutofit.disconnect(); this._termAutofit = null; }
-        if (this._onNavigate) window.removeEventListener('message', this._onNavigate);
-        Vulpes.wm.remove(this);
-        const finish = () => this.el.remove();
-        if (this.el.animate && Vulpes.wm.motion(1) && !this.minimized) {
-            this.el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.97)' }],
-                { duration: 120, easing: 'ease-in' }).finished.then(finish, finish);
-        } else finish();
-
-        // backend cleanup happens after the window is gone from the screen
-        const jobs = [Vulpes.api.deleteWindow(this.id)];
-        if (this.displayId) jobs.push(Vulpes.api.closeDisplay(this.displayId));
-        if (this.tabs && this.tabs.length) this.tabs.forEach(t => jobs.push(Vulpes.api.stopTerminal(t.port)));
-        else if (this.terminalPort) jobs.push(Vulpes.api.stopTerminal(this.terminalPort));
-        await Promise.allSettled(jobs);
+        if (this.canvasMonitorInterval) {
+            clearInterval(this.canvasMonitorInterval);
+        }
+        
+        await deleteWindowState(this.id);
+        
+        if (this.displayId) {
+            await fetch(`${API_BASE}/display/${this.displayId}`, { method: 'DELETE' });
+        }
+        
+        if (this.terminalPort) {
+            await fetch(`${APPS_API_BASE}/terminal/${this.terminalPort}`, { 
+                method: 'DELETE',
+                headers: Vulpes.api.getAuthHeaders()
+            });
+        }
+        
+        this.element.remove();
+        windows = windows.filter(w => w.id !== this.id);
+        
+        if (activeWindow === this) {
+            activeWindow = windows[windows.length - 1] || null;
+            if (activeWindow) activeWindow.focus();
+        }
+        
+        updateWindowManager();
     }
 
-    // -------------------------------------------------------- persistence
-    save() {
-        if (this.closed) return;
-        clearTimeout(this._saveTimer);
-        this._saveTimer = setTimeout(() => {
-            Vulpes.api.saveWindow(this.toJSON()).catch(e => console.error('Failed to save window state:', e));
-        }, 250);
+    startResize(e, direction) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        this.focus();
+        resizeState = {
+            window: this,
+            direction,
+            startX: e.clientX,
+            startY: e.clientY,
+            startBounds: { ...this.bounds }
+        };
+        
+        this.hideContent();
+        document.body.style.cursor = window.getComputedStyle(e.target).cursor;
+    }
+
+    resize(dx, dy) {
+        const { direction, startBounds } = resizeState;
+        const newBounds = { ...startBounds };
+
+        if (direction.includes('e')) {
+            newBounds.width = Math.max(400, startBounds.width + dx);
+        }
+        if (direction.includes('w')) {
+            const newWidth = Math.max(400, startBounds.width - dx);
+            const widthDiff = newWidth - startBounds.width;
+            newBounds.x = startBounds.x - widthDiff;
+            newBounds.width = newWidth;
+        }
+        if (direction.includes('s')) {
+            newBounds.height = Math.max(300, startBounds.height + dy);
+        }
+        if (direction.includes('n')) {
+            const newHeight = Math.max(300, startBounds.height - dy);
+            const heightDiff = newHeight - startBounds.height;
+            newBounds.y = startBounds.y - heightDiff;
+            newBounds.height = newHeight;
+        }
+
+        this.bounds = newBounds;
+        this.element.style.left = `${newBounds.x}px`;
+        this.element.style.top = `${newBounds.y}px`;
+        this.element.style.width = `${newBounds.width}px`;
+        this.element.style.height = `${newBounds.height}px`;
+        
+        const titlebar = this.element.querySelector('.window-titlebar');
+        if (titlebar) {
+            let resizeIndicator = titlebar.querySelector('.resize-indicator');
+            if (!resizeIndicator) {
+                resizeIndicator = document.createElement('div');
+                resizeIndicator.className = 'resize-indicator';
+                resizeIndicator.style.cssText = 'position: absolute; right: 50%; transform: translateX(50%); background: var(--bg-secondary); padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); pointer-events: none;';
+                titlebar.appendChild(resizeIndicator);
+            }
+            resizeIndicator.textContent = `${Math.floor(newBounds.width)} × ${Math.floor(newBounds.height)}`;
+            resizeIndicator.style.display = 'block';
+        }
+    }
+
+    hideContent() {
+        const contentDiv = this.element.querySelector('.window-content');
+        if (contentDiv) contentDiv.style.visibility = 'hidden';
+    }
+
+    showContent() {
+        const contentDiv = this.element.querySelector('.window-content');
+        if (contentDiv) contentDiv.style.visibility = 'visible';
+    }
+    
+    async finishResize() {
+        const resizeIndicator = this.element.querySelector('.resize-indicator');
+        if (resizeIndicator) {
+            resizeIndicator.style.display = 'none';
+        }
+        
+        if (this.displayId && this.app.type === 'executable') {
+            const contentDiv = this.element.querySelector('.window-content');
+            const rect = contentDiv.getBoundingClientRect();
+            const width = Math.floor(rect.width);
+            const height = Math.floor(rect.height);
+            
+            try {
+                await fetch(`${API_BASE}/resize/${this.displayId}/${width}/${height}`, {
+                    method: 'POST'
+                });
+            } catch (error) {
+                console.error('Failed to resize display:', error);
+            }
+        }
+        
+        this.showContent();
+        await saveWindowState(this);
     }
 
     toJSON() {
@@ -519,18 +535,118 @@ class Window {
             app_id: this.app.id,
             type: this.app.type,
             title: this.app.name,
-            icon: this.app.id,
+            icon: this.app.icon,
             x: this.bounds.x,
             y: this.bounds.y,
             width: this.bounds.width,
             height: this.bounds.height,
-            isMaximized: this.state === 'maximized',
-            isMinimized: this.minimized,
-            snap: (this.state === 'left' || this.state === 'right') ? this.state : null,
+            isMaximized: this.isMaximized,
             displayId: this.displayId,
             terminalPort: this.terminalPort,
             zIndex: this.zIndex,
-            data: {},
+            data: this.data
         };
     }
+}
+
+
+
+async function saveWindowState(window) {
+    try {
+        await fetch(`${APPS_API_BASE}/session/window`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...Vulpes.api.getAuthHeaders() },
+            body: JSON.stringify(window.toJSON())
+        });
+        console.log('Window state saved:', window.id);
+    } catch (error) {
+        console.error('Failed to save window state:', error);
+    }
+}
+
+async function deleteWindowState(windowId) {
+    try {
+        await fetch(`${APPS_API_BASE}/session/window/${windowId}`, {
+            method: 'DELETE',
+            headers: Vulpes.api.getAuthHeaders()
+        });
+        console.log('Window state deleted:', windowId);
+    } catch (error) {
+        console.error('Failed to delete window state:', error);
+    }
+}
+
+async function getSession() {
+    try {
+        const response = await fetch(`${APPS_API_BASE}/session`, {
+            headers: Vulpes.api.getAuthHeaders()
+        });
+        const data = await response.json();
+        console.log('Windows:', data.windows.length);
+        return data.windows;
+    } catch (error) {
+        console.error('Failed to get session:', error);
+        return [];
+    }
+}
+
+async function restoreWindowsState() {
+    const windowStates = await getSession();
+    
+    console.log('Restoring windows:', windowStates);
+    
+    if (!windowStates || windowStates.length === 0) {
+        console.log('No windows to restore');
+        return;
+    }
+    
+    for (const winData of windowStates) {
+        const app = Vulpes.applications.find(a => a.id === winData.app_id);
+        if (!app) {
+            console.warn('App not found for window:', winData.app_id);
+            continue;
+        }
+        
+        console.log('Restoring window:', winData.id, 'for app:', app.name);
+        
+        const win = new Window(app, {
+            id: winData.id,
+            x: winData.x,
+            y: winData.y,
+            width: winData.width,
+            height: winData.height,
+            isMaximized: winData.isMaximized,
+            displayId: winData.displayId,
+            terminalPort: winData.terminalPort,
+            restored: true
+        });
+        windows.push(win);
+    }
+    
+    if (windows.length > 0) {
+        showNotification(`Restored ${windows.length} window(s)`, 'success');
+        console.log('Successfully restored', windows.length, 'windows');
+    }
+    
+    updateWindowManager();
+}
+
+// Constrain window position to viewport
+function constrainToViewport(x, y, width, height) {
+    const topbarHeight = isMobile ? 44 : 32;
+    const minVisibleHeight = 34; // titlebar height
+    
+    // Ensure top of window (titlebar) is always visible
+    const maxY = window.innerHeight - minVisibleHeight;
+    const minY = topbarHeight;
+    
+    // Keep some of the window visible horizontally
+    const minVisibleWidth = 100;
+    const maxX = window.innerWidth - minVisibleWidth;
+    const minX = -width + minVisibleWidth;
+    
+    return {
+        x: Math.max(minX, Math.min(x, maxX)),
+        y: Math.max(minY, Math.min(y, maxY))
+    };
 }
