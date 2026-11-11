@@ -45,7 +45,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # I would like to do this as vulpes but it is not possible with docker as of today, COPY is made as root
 COPY WebOS /opt/webos
 
-COPY xterm_rs /opt/webos/xterm_rs
+COPY WebOS/xterm_rs /opt/webos/xterm_rs
 
 RUN chown -R vulpes:vulpes /opt/webos
 
