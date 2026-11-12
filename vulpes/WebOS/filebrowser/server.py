@@ -295,7 +295,7 @@ var $=function(id){return document.getElementById(id);};
 // theme CSS variables and apply them (falls back to our defaults when opened directly).
 function applyParentTheme(){try{var pr=parent.document.documentElement;if(pr===document.documentElement)return;
   var ps=getComputedStyle(pr),r=document.documentElement.style;
-  var map={'--bg':'--content-bg','--sf':'--surface','--sf2':'--surface-2','--tx':'--text','--mut':'--text-2','--acc':'--primary','--blue':'--accent-2','--red':'--danger','--ok':'--ok'};
+  var map={'--bg':'--surface','--sf':'--surface-2','--sf2':'--surface-3','--tx':'--text','--mut':'--text-2','--acc':'--primary','--blue':'--accent-2','--red':'--danger','--ok':'--ok'};
   for(var k in map){var v=ps.getPropertyValue(map[k]).trim();if(v)r.setProperty(k,v);}
 }catch(e){}}
 applyParentTheme();

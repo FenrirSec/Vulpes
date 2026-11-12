@@ -508,7 +508,7 @@ body.wm-busy { cursor: grabbing; }
 .vpn-badge[data-up="1"] { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--ok); }
 .vpn-badge[data-up="0"] { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
 .vpn-out {
-    background: var(--content-bg); border: 1px solid var(--line); border-radius: var(--r);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r);
     padding: var(--sp-3); margin: 0 0 var(--sp-2); max-height: 44vh; overflow: auto;
     font: var(--fs-sm)/1.5 ui-monospace, "Hack Nerd Font", monospace; color: var(--text);
     white-space: pre-wrap; word-break: break-all;
