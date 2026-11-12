@@ -181,7 +181,11 @@ class Window {
 
     loadUrl() {
         const proxy = this.app.proxy !== false;
-        const toSrc = (url) => proxy ? `${Vulpes.APPS_API_BASE}/proxy/${btoa(url)}` : url;
+        // Root-relative app URLs (our own services, e.g. /port/8899/) must resolve
+        // against Vulpes.BASE so they keep any path prefix (tunnel/reverse-proxy),
+        // the same way the terminal and display frames do.
+        const resolve = (u) => (u && u.charAt(0) === '/') ? (Vulpes.BASE + u) : u;
+        const toSrc = (url) => proxy ? `${Vulpes.APPS_API_BASE}/proxy/${btoa(url)}` : resolve(url);
         // Proxied external sites are sandboxed; our own same-origin web apps
         // (e.g. code-server) get the extra permissions an IDE needs.
         const iframe = this.makeFrame(toSrc(this.app.url), {

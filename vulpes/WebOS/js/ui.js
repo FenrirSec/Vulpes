@@ -68,11 +68,8 @@ Vulpes.ui = (() => {
     const root = document.documentElement;
 
     function syncAccentPicker() {
-        // Use the live computed --primary (what applyColor/applyTheme just set),
-        // NOT storage('mainColor'): the input handler stores mainColor *after*
-        // calling applyColor, so reading storage here would write the previous
-        // colour back onto the swatch and make it look like the pick was ignored.
-        const cur = getComputedStyle(root).getPropertyValue('--primary').trim();
+        const stored = storage('mainColor');
+        const cur = (stored || getComputedStyle(root).getPropertyValue('--primary')).trim();
         const inp = $('input-color');
         if (inp && /^#[0-9a-f]{6}$/i.test(cur)) inp.value = cur;
     }
