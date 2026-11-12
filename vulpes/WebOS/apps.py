@@ -480,6 +480,80 @@ async def reload_applications(username: str = Depends(verify_credentials)):
     apps = load_applications()
     return {"status": "reloaded", "count": len(apps)}
 
+# ------------------------------------------------------------- WireGuard VPN
+# A small helper surfaced in the top bar: shows the equivalent of `wg show` and
+# lets the user download the config of the active interface to use elsewhere.
+# wg needs root; the vulpes user has passwordless sudo (wheel group).
+WG_DIR = "/etc/wireguard"
+
+def _wg(args: List[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(["sudo", "wg", *args], capture_output=True, text=True, timeout=10)
+
+def _wg_interfaces() -> List[str]:
+    try:
+        r = _wg(["show", "interfaces"])
+        return r.stdout.split() if r.returncode == 0 else []
+    except Exception:
+        return []
+
+@app.get("/vpn/status")
+async def vpn_status(username: str = Depends(verify_credentials)):
+    """Equivalent of `wg show`: active WireGuard interfaces and their status."""
+    ifaces = _wg_interfaces()
+    if not ifaces:
+        return {"up": False, "interfaces": [], "interface": None, "output": ""}
+    try:
+        r = _wg(["show"])
+        output = (r.stdout if r.returncode == 0 else r.stderr) or ""
+    except Exception as e:
+        output = f"error: {e}"
+    return {
+        "up": True,
+        "interfaces": ifaces,
+        "interface": ifaces[0],
+        "output": output.strip(),
+    }
+
+@app.get("/vpn/config")
+async def vpn_config(iface: Optional[str] = None, username: str = Depends(verify_credentials)):
+    """Download the active interface's .conf (on-disk wg-quick config, or the
+    live kernel config as a fallback). The interface name is validated against
+    the set of active interfaces, so this can't read arbitrary files."""
+    ifaces = _wg_interfaces()
+    if not ifaces:
+        raise HTTPException(status_code=404, detail="No active WireGuard interface")
+    if iface is None:
+        iface = ifaces[0]
+    if iface not in ifaces:
+        raise HTTPException(status_code=400, detail="Unknown interface")
+
+    content = None
+    # Prefer the on-disk wg-quick config: it keeps Address / DNS, needed to
+    # bring the tunnel up on another machine.
+    try:
+        r = subprocess.run(["sudo", "cat", os.path.join(WG_DIR, f"{iface}.conf")],
+                           capture_output=True, text=True, timeout=10)
+        if r.returncode == 0 and r.stdout.strip():
+            content = r.stdout
+    except Exception:
+        content = None
+    # Fall back to the live config dumped from the kernel (keys + peers only).
+    if content is None:
+        try:
+            r = _wg(["showconf", iface])
+            if r.returncode == 0 and r.stdout.strip():
+                content = r.stdout
+        except Exception:
+            content = None
+    if content is None:
+        raise HTTPException(status_code=404, detail="Could not read configuration")
+
+    return Response(
+        content=content,
+        media_type="text/plain",
+        headers={"Content-Disposition": f'attachment; filename="{iface}.conf"'},
+    )
+
 @app.post("/session/window")
 async def save_window(window: WindowState, username: str = Depends(verify_credentials)):
     """Save or update a window state to global session"""

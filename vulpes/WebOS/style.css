@@ -173,6 +173,12 @@ iframe { display: block; border: 0; width: 100%; height: 100%; }
 }
 
 .panel-start, .panel-end { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+/* Pin grid columns so the right cluster stays right even when .tasks is empty
+ * (an empty .tasks is display:none, which would otherwise let .panel-end
+ * auto-place into the middle column). */
+.panel-start { grid-column: 1; }
+.tasks { grid-column: 2; }
+.panel-end { grid-column: 3; justify-self: end; }
 
 /* a pill module: the shared container look for grouped widgets.
  * Tied to the theme's surface (same family as window titlebars) so the bar
@@ -492,6 +498,23 @@ body.wm-busy { cursor: grabbing; }
 .setting.stack > span, .setting.stack > label { font-weight: 700; font-size: var(--fs-md); }
 .setting-note { color: var(--text-2); font-size: var(--fs-sm); padding: var(--sp-2) 0 var(--sp-3); border-top: 1px solid var(--line); }
 
+/* VPN helper panel */
+.vpn-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-2); }
+.vpn-head h2 { margin: 0; }
+.vpn-badge {
+    font-size: var(--fs-sm); font-weight: 700; padding: 2px 10px; border-radius: 999px;
+    background: var(--surface-2); color: var(--text-2); white-space: nowrap;
+}
+.vpn-badge[data-up="1"] { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--ok); }
+.vpn-badge[data-up="0"] { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+.vpn-out {
+    background: var(--content-bg); border: 1px solid var(--line); border-radius: var(--r);
+    padding: var(--sp-3); margin: 0 0 var(--sp-2); max-height: 44vh; overflow: auto;
+    font: var(--fs-sm)/1.5 ui-monospace, "Hack Nerd Font", monospace; color: var(--text);
+    white-space: pre-wrap; word-break: break-all;
+}
+.vpn code { font-family: ui-monospace, monospace; font-size: .95em; }
+
 /* form controls: shared height/shape */
 .field {
     height: var(--btn-h); padding: 0 var(--sp-2);
@@ -501,6 +524,32 @@ body.wm-busy { cursor: grabbing; }
 }
 .field:focus { outline: none; border-color: var(--ring); }
 select.field { cursor: pointer; }
+
+/* custom dropdown replacing the native <select> (Firefox popup-in-filtered-
+   ancestor bug). .cs is the trigger button; .cs-menu is portaled to <body>. */
+button.cs {
+    display: inline-flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+    text-align: left; cursor: pointer;
+}
+button.cs::after {
+    content: ""; width: 8px; height: 8px; flex: none;
+    border-right: 2px solid var(--text-2); border-bottom: 2px solid var(--text-2);
+    transform: translateY(-2px) rotate(45deg);
+}
+button.cs[aria-expanded="true"]::after { transform: translateY(1px) rotate(-135deg); }
+.cs-menu {
+    position: fixed; z-index: 10050;
+    max-height: 260px; overflow-y: auto; padding: var(--sp-1);
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+    box-shadow: 0 16px 40px -14px rgba(0, 0, 0, .75);
+}
+.cs-opt {
+    padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm);
+    font-size: var(--fs-md); cursor: pointer; white-space: nowrap;
+}
+.cs-opt:hover { background: var(--surface-2); }
+.cs-opt.sel { background: color-mix(in srgb, var(--primary) 24%, var(--surface-2)); color: var(--text); }
 textarea.field {
     height: auto; min-height: 96px; padding: var(--sp-2);
     width: 100%; resize: vertical; font-family: var(--font-mono); font-size: var(--fs-sm);

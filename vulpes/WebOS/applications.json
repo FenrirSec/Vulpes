@@ -9,21 +9,41 @@
     "docked": true
   },
   {
+    "id": "browser",
+    "name": "Browser",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4IiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCI+PHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIyOCIgZmlsbD0iIzFlMWUyZSIvPjxjaXJjbGUgY3g9IjY0IiBjeT0iNjQiIHI9IjM0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4OWI0ZmEiIHN0cm9rZS13aWR0aD0iNSIvPjxlbGxpcHNlIGN4PSI2NCIgY3k9IjY0IiByeD0iMTUiIHJ5PSIzNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODliNGZhIiBzdHJva2Utd2lkdGg9IjQiIG9wYWNpdHk9Ii43Ii8+PHBhdGggZD0iTTMxIDU0aDY2TTMxIDc0aDY2IiBzdHJva2U9IiM4OWI0ZmEiIHN0cm9rZS13aWR0aD0iNCIgb3BhY2l0eT0iLjciLz48cGF0aCBkPSJNNjQgNjQgNzggNTAgNzAgNzIgNTAgNzh6IiBmaWxsPSIjY2JhNmY3Ii8+PGNpcmNsZSBjeD0iNjQiIGN5PSI2NCIgcj0iNCIgZmlsbD0iIzFlMWUyZSIvPjwvc3ZnPgo=",
+    "type": "url",
+    "url": "/port/8899/",
+    "category": "internet",
+    "proxy": false,
+    "docked": true
+  },
+  {
+    "id": "filebrowser",
+    "name": "Files",
+    "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4IiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCI+PHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIyOCIgZmlsbD0iIzFlMWUyZSIvPjxwYXRoIGQ9Ik0yNiA0MGE4IDggMCAwIDEgOC04aDIwbDEwIDEwaDMwYTggOCAwIDAgMSA4IDh2NEgyNnoiIGZpbGw9IiM3NGM3ZWMiLz48cGF0aCBkPSJNMjIgNTBhNiA2IDAgMCAxIDYtNmg3MmE2IDYgMCAwIDEgNiA2bC03IDQyYTggOCAwIDAgMS04IDdIMzBhOCA4IDAgMCAxLTgtN3oiIGZpbGw9IiM4OWI0ZmEiLz48cmVjdCB4PSI1NCIgeT0iNjIiIHdpZHRoPSIyMCIgaGVpZ2h0PSI0IiByeD0iMiIgZmlsbD0iIzFlMWUyZSIgb3BhY2l0eT0iLjI1Ii8+PC9zdmc+",
+    "type": "url",
+    "url": "/port/8090/",
+    "category": "system",
+    "proxy": false,
+    "docked": true
+  },
+  {
     "id": "hacktricks",
     "name": "HackTricks",
     "icon": "hacktricks",
     "type": "url",
     "url": "https://book.hacktricks.wiki",
-      "category": "internet",
-      "proxy": true
+    "category": "internet",
+    "proxy": true
   },
-    {
-	"id": "payloadsallthethings",
-	"name": "PayloadsAllTheThings",
-	"icon": "browser",
-	"type": "url",
-	"url": "https://swisskyrepo.github.io/PayloadsAllTheThings/",
-	"category": "internet",
-	"proxy": true
+  {
+    "id": "payloadsallthethings",
+    "name": "PayloadsAllTheThings",
+    "icon": "browser",
+    "type": "url",
+    "url": "https://swisskyrepo.github.io/PayloadsAllTheThings/",
+    "category": "internet",
+    "proxy": true
   }
 ]

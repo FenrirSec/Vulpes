@@ -1,0 +1,13 @@
+{
+  "name": "caido",
+  "version": "1.0",
+  "description": "Runs Caido headless (caido-cli --listen 0.0.0.0:8083) if it is not already running, and opens the Caido web UI in a Vulpes window via /port/8083/. Complements the caido-cli package.",
+  "author": "Fenrir",
+  "requires_sudo": true,
+  "alpine_packages": [],
+  "install_script": "set -e\n# This app complements the caido-cli package and drives that binary.\ncommand -v caido-cli >/dev/null 2>&1 || { echo \"[caido] ERROR: install the caido-cli package first:  sudo vulpkg install caido-cli\" >&2; exit 1; }\n\n# Boot autostart: run Caido headless on :8083 if it is not already running.\nmkdir -p /var/lib/vulpkg/startup\ncat > /var/lib/vulpkg/startup/caido.sh <<'SH'\n#!/bin/bash\npgrep -f 'caido-cli.*--listen' >/dev/null 2>&1 && exit 0\ncommand -v caido-cli >/dev/null 2>&1 || exit 0\nexec caido-cli --listen 0.0.0.0:8083\nSH\nchmod 755 /var/lib/vulpkg/startup/caido.sh\n\n# Start it now so the app works without a restart (guarded, detached from the installer pipe).\nif ! pgrep -f 'caido-cli.*--listen' >/dev/null 2>&1; then\n  caido-cli --listen 0.0.0.0:8083 >/tmp/caido.log 2>&1 </dev/null &\n  sleep 1\nfi\necho '[caido] ready - caido-cli serving on :8083; open \"Caido\" from the launcher (/port/8083/)'\n",
+  "files": {
+    "/var/lib/vulpkg/applications/caido.desktop": "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Caido\nGenericName=Web Security Proxy\nComment=Caido web UI (headless caido-cli on port 8083)\nURL=/port/8083/\nIcon=caido\nCategories=Network;Development;\nKeywords=caido;proxy;intercept;web;security;\n",
+    "/var/lib/vulpkg/icons/caido.svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128\" width=\"128\" height=\"128\"><rect width=\"128\" height=\"128\" rx=\"28\" fill=\"#1e1e2e\"/><rect x=\"16\" y=\"16\" width=\"96\" height=\"96\" rx=\"22\" fill=\"#fb5d50\"/><path d=\"M86 48a26 26 0 1 0 0 32\" fill=\"none\" stroke=\"#fff\" stroke-width=\"9\" stroke-linecap=\"round\"/><circle cx=\"64\" cy=\"64\" r=\"8\" fill=\"#1e1e2e\"/><circle cx=\"64\" cy=\"64\" r=\"4\" fill=\"#fff\"/></svg>"
+  }
+}

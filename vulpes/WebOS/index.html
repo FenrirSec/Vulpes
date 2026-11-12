@@ -20,6 +20,7 @@
         <symbol id="i-unfull" viewBox="0 0 16 16"><path d="M6 2.5V6H2.5M13.5 6H10V2.5M10 13.5V10h3.5M2.5 10H6v3.5" /></symbol>
         <symbol id="i-gear" viewBox="0 0 16 16"><path d="M2.5 4.5h4M9.5 4.5h4M2.5 11.5h7M12.5 11.5h1" /><circle cx="8" cy="4.5" r="1.5" /><circle cx="11" cy="11.5" r="1.5" /></symbol>
         <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5l3 3" /></symbol>
+        <symbol id="i-shield" viewBox="0 0 16 16"><path d="M8 1.8l5 1.8v4.1c0 3-2.1 5-5 6.5-2.9-1.5-5-3.5-5-6.5V3.6z" /><path d="M5.7 8l1.6 1.6 3-3.2" /></symbol>
     </svg>
 
     <div class="desktop" id="desktop">
@@ -35,6 +36,9 @@
             <div class="panel-end">
                 <button class="panel-btn" id="fullscreenBtn" title="Full screen (lets apps receive Ctrl+W, Ctrl+T, Esc…)">
                     <svg class="ico"><use href="#i-full" /></svg>
+                </button>
+                <button class="panel-btn" id="vpnBtn" title="VPN status" aria-haspopup="true" aria-expanded="false">
+                    <svg class="ico"><use href="#i-shield" /></svg>
                 </button>
                 <button class="panel-btn" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
                     <svg class="ico"><use href="#i-gear" /></svg>
@@ -132,6 +136,20 @@
                 <span>Session</span>
                 <button class="link-btn" id="logoutBtn">Log out</button>
             </div>
+        </section>
+
+        <section class="settings vpn" id="vpnPanel" aria-label="VPN" hidden>
+            <div class="vpn-head">
+                <h2>WireGuard</h2>
+                <span class="vpn-badge" id="vpnBadge" data-up="0">checking…</span>
+            </div>
+            <p class="setting-note" id="vpnMeta">Live output of <code>wg show</code>.</p>
+            <pre class="vpn-out" id="vpnOut">Loading…</pre>
+            <div class="setting">
+                <button class="ghost-btn" id="vpnRefresh">Refresh</button>
+                <button class="primary-btn" id="vpnDownload" disabled>Download .conf</button>
+            </div>
+            <p class="setting-note">The config lets you bring the same tunnel up on another machine. Keep it private — it contains the interface private key.</p>
         </section>
 
         <div class="toasts" id="toasts" aria-live="polite"></div>
