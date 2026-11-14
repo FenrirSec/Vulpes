@@ -132,6 +132,17 @@
                 </div>
             </div>
             <p class="setting-note">Custom CSS overrides the theme. Edit the scale tokens (--sp-*, --fs-*, --ctl, --r) or any colour variable. Full screen lets remote apps receive shortcuts such as Ctrl+W and Ctrl+T; hold Esc to leave.</p>
+            <div class="setting stack">
+                <label for="pwNew">Change password</label>
+                <input type="password" class="field" id="pwCurrent" placeholder="Current password" autocomplete="current-password">
+                <input type="password" class="field" id="pwNew" placeholder="New password (min 6 characters)" autocomplete="new-password">
+                <input type="password" class="field" id="pwConfirm" placeholder="Confirm new password" autocomplete="new-password">
+                <div class="row">
+                    <button class="primary-btn" id="pwSave">Update password</button>
+                    <span class="pw-msg" id="pwMsg" role="status" aria-live="polite"></span>
+                </div>
+            </div>
+            <p class="setting-note">Changes the server login password for everyone. Other signed-in devices are logged out. Set it to something strong.</p>
             <div class="setting">
                 <span>Session</span>
                 <button class="link-btn" id="logoutBtn">Log out</button>

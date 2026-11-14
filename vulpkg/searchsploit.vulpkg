@@ -5,7 +5,8 @@
   "author": "Exploit-DB",
   "requires_sudo": true,
   "alpine_packages": [
-    "git"
+    "git",
+    "ncurses"
   ],
   "install_script": "git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb\nln -sf /opt/exploitdb/searchsploit /usr/local/bin/searchsploit\nchown -R vulpes:vulpes /opt/exploitdb 2>/dev/null || true"
 }

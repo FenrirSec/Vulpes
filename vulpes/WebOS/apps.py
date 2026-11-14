@@ -19,6 +19,22 @@ HOST = "0.0.0.0"
 AUTH_USERNAME = os.getenv("USERNAME") if os.getenv("USERNAME") else "vulpes"
 AUTH_PASSWORD = os.getenv("PASSWORD") if os.getenv("PASSWORD") else "vulpes"
 
+# A password set from the UI is persisted here and overrides the env/default on
+# startup. Put this path on a mounted volume to survive container recreation.
+AUTH_STORE = os.getenv("VULPES_AUTH_FILE", "/home/vulpes/.vulpes_auth")
+
+def _load_stored_password():
+    global AUTH_PASSWORD
+    try:
+        with open(AUTH_STORE) as _f:
+            _d = json.load(_f)
+        if isinstance(_d, dict) and _d.get("password"):
+            AUTH_PASSWORD = _d["password"]
+    except Exception:
+        pass
+
+_load_stored_password()
+
 app = FastAPI(title="Vulpes WebOS Apps API")
 security = HTTPBasic()
 
@@ -479,6 +495,41 @@ async def reload_applications(username: str = Depends(verify_credentials)):
     """Force reload applications"""
     apps = load_applications()
     return {"status": "reloaded", "count": len(apps)}
+
+# ------------------------------------------------------------- change password
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+@app.post("/auth/password")
+async def change_password(body: PasswordChange, username: str = Depends(verify_credentials)):
+    """Change the server password. Requires the current password; persists the new
+    one to AUTH_STORE and invalidates existing sessions so other devices re-auth."""
+    global AUTH_PASSWORD
+    if not secrets.compare_digest(body.current_password or "", AUTH_PASSWORD):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Current password is incorrect")
+    new = body.new_password or ""
+    if len(new) < 6:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 6 characters")
+
+    AUTH_PASSWORD = new
+    persisted = True
+    try:
+        d = os.path.dirname(AUTH_STORE)
+        if d:
+            os.makedirs(d, exist_ok=True)
+        with open(AUTH_STORE, "w") as f:
+            json.dump({"password": new}, f)
+        try:
+            os.chmod(AUTH_STORE, 0o600)
+        except Exception:
+            pass
+    except Exception:
+        persisted = False
+
+    # Drop every issued session cookie so other devices must sign in with the new password.
+    session_tokens.clear()
+    return {"status": "ok", "persisted": persisted}
 
 # ------------------------------------------------------------- WireGuard VPN
 # A small helper surfaced in the top bar: shows the equivalent of `wg show` and

@@ -68,8 +68,11 @@ Vulpes.ui = (() => {
     const root = document.documentElement;
 
     function syncAccentPicker() {
-        const stored = storage('mainColor');
-        const cur = (stored || getComputedStyle(root).getPropertyValue('--primary')).trim();
+        // Use the live computed --primary (what applyColor/applyTheme just set),
+        // NOT storage('mainColor'): the input handler stores mainColor *after*
+        // calling applyColor, so reading storage here would write the previous
+        // colour back onto the swatch and make it look like the pick was ignored.
+        const cur = getComputedStyle(root).getPropertyValue('--primary').trim();
         const inp = $('input-color');
         if (inp && /^#[0-9a-f]{6}$/i.test(cur)) inp.value = cur;
     }
@@ -273,6 +276,39 @@ Vulpes.ui = (() => {
         }
     }
 
+    // ---------------------------------------------------------- password change
+    async function changePassword() {
+        const cur = $('pwCurrent').value, nw = $('pwNew').value, cf = $('pwConfirm').value;
+        const msg = $('pwMsg');
+        const fail = (t) => { msg.dataset.ok = '0'; msg.textContent = t; };
+        msg.textContent = '';
+        if (nw.length < 6) return fail('New password must be at least 6 characters.');
+        if (nw !== cf) return fail('New passwords do not match.');
+        const btn = $('pwSave'); btn.disabled = true;
+        try {
+            const r = await fetch(Vulpes.APPS_API_BASE + '/auth/password', {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, Vulpes.api.getAuthHeaders()),
+                body: JSON.stringify({ current_password: cur, new_password: nw }),
+            });
+            if (!r.ok) {
+                const e = await r.json().catch(() => ({}));
+                return fail(e.detail || ('Error ' + r.status));
+            }
+            // keep this session working: update the stored credentials and refresh the cookie
+            const creds = { username: Vulpes.api.getCredentials().username, password: nw };
+            Vulpes.api.setCredentials(creds);
+            try { storage('authCredentials', JSON.stringify(creds)); } catch (e) {}
+            try { await Vulpes.api.getSession(); } catch (e) {}
+            $('pwCurrent').value = ''; $('pwNew').value = ''; $('pwConfirm').value = '';
+            msg.dataset.ok = '1'; msg.textContent = 'Password updated.';
+        } catch (e) {
+            fail('Request failed: ' + e.message);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
     // -------------------------------------------------------------- setup
     function bind() {
         $('appsBtn').addEventListener('click', (e) => { e.stopPropagation(); toggle('launcher'); });
@@ -281,6 +317,7 @@ Vulpes.ui = (() => {
         $('vpnBtn').addEventListener('click', (e) => { e.stopPropagation(); toggle('vpn'); });
         $('vpnRefresh').addEventListener('click', loadVpn);
         $('vpnDownload').addEventListener('click', downloadVpn);
+        $('pwSave').addEventListener('click', changePassword);
         $('fullscreenBtn').addEventListener('click', toggleFullscreen);
         document.addEventListener('fullscreenchange', onFullscreenChange);
 

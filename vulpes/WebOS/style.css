@@ -515,6 +515,11 @@ body.wm-busy { cursor: grabbing; }
 }
 .vpn code { font-family: ui-monospace, monospace; font-size: .95em; }
 
+/* Change-password status line */
+.pw-msg { font-size: var(--fs-sm); color: var(--text-2); align-self: center; }
+.pw-msg[data-ok="1"] { color: var(--ok); }
+.pw-msg[data-ok="0"] { color: var(--danger); }
+
 /* form controls: shared height/shape */
 .field {
     height: var(--btn-h); padding: 0 var(--sp-2);
