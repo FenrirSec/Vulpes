@@ -168,29 +168,70 @@ class SingleWindowDisplay:
             print(f"XFIXES unavailable on {self.display_name}: {e}")
 
     def stop(self):
+        """Stop the virtual display"""
         self.is_running = False
-        if self.process and self.process.poll() is None:
+        # Kill the application AND everything it spawned. start_executable runs it
+        # in its own session (os.setsid), so killing the process group takes the
+        # whole tree. Then wait() to reap it: without this the app is orphaned and
+        # becomes a zombie (nobody wait()s it), leaking the PID and the X / mss
+        # file descriptors it held. Over a day of open/close that exhausts fds and
+        # the WS server can no longer accept new display connections.
+        if self.app_process:
+            self._kill_process(self.app_process)
+            self.app_process = None
+        try:
+            self.capture_executor.shutdown(wait=False)
+        except Exception:
+            pass
+        if self.screen_capture:
             try:
-                os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                self.screen_capture.close()
             except Exception:
                 pass
-        for conn in (self.monitor_display, self.x11_display):
-            if conn:
+        if self.xvfb_process:
+            self._kill_process(self.xvfb_process, group=False)
+            self.xvfb_process = None
+        if self.x11_display:
+            try:
+                self.x11_display.close()
+            except Xlib.error.ConnectionClosedError:
+                print("Display closed.")
+        print(f"Window display stopped (ID: {self.display_id})")
+
+
+    @staticmethod
+    def _kill_process(proc, group=True):
+        """Terminate a process (its whole group when group=True) and reap it so it
+        never lingers as a zombie."""
+        if proc.poll() is not None:
+            try:
+                proc.wait(timeout=1)
+            except Exception:
+                pass
+            return
+        targets = []
+        if group:
+            try:
+                targets.append(('group', os.getpgid(proc.pid)))
+            except Exception:
+                pass
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            if group and targets:
                 try:
-                    conn.close()
+                    os.killpg(targets[0][1], sig)
                 except Exception:
                     pass
-        if self.frame_source:
-            self.frame_source.close()
-        if self.xvfb_process:
-            self.xvfb_process.terminate()
+            else:
+                try:
+                    proc.send_signal(sig)
+                except Exception:
+                    pass
             try:
-                self.xvfb_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.xvfb_process.kill()
-        if self.fbdir:
-            shutil.rmtree(self.fbdir, ignore_errors=True)
-        print(f"Window display stopped (ID: {self.display_id})")
+                proc.wait(timeout=3)
+                return
+            except Exception as e:
+                print(e)
+                continue
 
     def get_display(self):
         return self.x11_display
